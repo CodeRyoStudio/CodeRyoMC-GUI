@@ -40,11 +40,13 @@ public class EventListener implements Listener {
                 item.actions().forEach(action -> action.execute(player));
             }
         } else if (holder instanceof EditorHolder editorHolder) {
-            event.setCancelled(true);
             CustomGUI gui = editorHolder.getGUI();
             int pageId = editorHolder.getPageId();
+            GUIPage page = gui.pages().get(pageId);
 
             if (title.startsWith("編輯: ")) {
+                // 先處理設置按鈕（slot 0-7），不受 allowTake 或 allowPlace 影響
+                event.setCancelled(true);
                 if (slot == 0) {
                     plugin.setEditSession(player.getUniqueId(), new EditSession(gui, "set_name", -1, pageId));
                     player.closeInventory();
@@ -67,19 +69,23 @@ public class EventListener implements Listener {
                 } else if (slot == 5 && pageId < gui.pages().size()) {
                     GUIEditor.openEditor(player, gui, pageId + 1); // 下一頁
                 } else if (slot == 6) {
-                    GUIPage page = gui.pages().get(pageId);
                     gui.pages().put(pageId, new GUIPage(page.items(), !page.allowTake(), page.allowPlace()));
                     plugin.getDataStorage().saveGUIsAsync();
                     GUIEditor.openEditor(player, gui, pageId);
                 } else if (slot == 7) {
-                    GUIPage page = gui.pages().get(pageId);
                     gui.pages().put(pageId, new GUIPage(page.items(), page.allowTake(), !page.allowPlace()));
                     plugin.getDataStorage().saveGUIsAsync();
                     GUIEditor.openEditor(player, gui, pageId);
                 } else if (slot >= 9 && slot < 9 + gui.rows() * 9) {
-                    GUIEditor.openItemSelect(player, gui, slot - 9, pageId);
+                    // 僅對 GUI 格子應用 allowTake 和 allowPlace
+                    if (page.allowTake() || page.allowPlace()) {
+                        event.setCancelled(false);
+                    } else {
+                        GUIEditor.openItemSelect(player, gui, slot - 9, pageId);
+                    }
                 }
             } else if (title.equals("選擇行數")) {
+                event.setCancelled(true);
                 if (slot >= 0 && slot < 6) {
                     int newRows = slot + 1;
                     CustomGUI updatedGui = new CustomGUI(gui.name(), newRows, gui.pages());
@@ -88,8 +94,8 @@ public class EventListener implements Listener {
                     GUIEditor.openEditor(player, updatedGui, pageId);
                 }
             } else if (title.equals("選擇物品")) {
+                event.setCancelled(true);
                 if (slot >= 0 && slot < GUIEditor.COMMON_ITEMS.length) {
-                    GUIPage page = gui.pages().get(pageId);
                     page.items().put(slot, new GUIItem(GUIEditor.COMMON_ITEMS[slot].name(), null, null, false, new ArrayList<>()));
                     gui.pages().put(pageId, page);
                     plugin.getGuiManager().getGUIs().put(gui.name(), gui);
@@ -101,8 +107,8 @@ public class EventListener implements Listener {
                     player.sendMessage("§a請輸入物品 ID（例如 minecraft:stone，輸入 /coderyogui cancel 取消）");
                 }
             } else if (title.equals("選擇動作")) {
+                event.setCancelled(true);
                 if (slot >= 0 && slot <= 7) {
-                    GUIPage page = gui.pages().get(pageId);
                     GUIItem item = page.items().get(slot);
                     List<GUIAction> actions = new ArrayList<>(item.actions());
                     switch (slot) {
@@ -149,8 +155,8 @@ public class EventListener implements Listener {
                     }
                 }
             } else if (title.equals("選擇音效")) {
+                event.setCancelled(true);
                 if (slot >= 0 && slot < GUIEditor.COMMON_SOUNDS.length) {
-                    GUIPage page = gui.pages().get(pageId);
                     GUIItem item = page.items().get(slot);
                     List<GUIAction> actions = new ArrayList<>(item.actions());
                     actions.add(new GUIAction("sound", GUIEditor.COMMON_SOUNDS[slot].name(), false));

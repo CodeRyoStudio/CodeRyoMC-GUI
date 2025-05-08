@@ -12,34 +12,34 @@ public record EditSession(CustomGUI gui, String state, int slot, int pageId, Lis
         this(gui, state, slot, pageId, new ArrayList<>());
     }
 
-    public boolean handleInput(Player player, String input, CoderyoGUI plugin) {
+    public String handleInput(Player player, String input, CoderyoGUI plugin) {
         GUIManager guiManager = plugin.getGuiManager();
         CustomGUI currentGui = gui;
         GUIPage page = currentGui.pages().get(pageId);
         switch (state) {
             case "set_name" -> {
-                guiManager.getGUIs().put(currentGui.name(), new CustomGUI(input, currentGui.rows(), currentGui.pages()));
+                guiManager.getGUIs().put(input, new CustomGUI(input, currentGui.rows(), currentGui.pages()));
                 guiManager.getGUIs().remove(currentGui.name());
-                return true;
+                return input; // 返回新名稱
             }
             case "set_item_id" -> {
-                if (Material.matchMaterial(input) == null) return false;
+                if (Material.matchMaterial(input) == null) return null;
                 page.items().put(slot, new GUIItem(input, null, null, false, new ArrayList<>()));
                 currentGui.pages().put(pageId, page);
                 guiManager.getGUIs().put(currentGui.name(), currentGui);
-                return true;
+                return currentGui.name();
             }
             case "set_item_name" -> {
                 GUIItem item = page.items().get(slot);
                 page.items().put(slot, new GUIItem(item.material(), input, item.lore(), item.takeable(), item.actions()));
                 currentGui.pages().put(pageId, page);
                 guiManager.getGUIs().put(currentGui.name(), currentGui);
-                return true;
+                return currentGui.name();
             }
             case "set_lore_line" -> {
                 tempData.add(input);
                 player.sendMessage("§a輸入下一行 Lore（輸入 /coderyogui cancel 結束）");
-                return true;
+                return currentGui.name();
             }
             case "set_command" -> {
                 GUIItem item = page.items().get(slot);
@@ -48,7 +48,7 @@ public record EditSession(CustomGUI gui, String state, int slot, int pageId, Lis
                 page.items().put(slot, new GUIItem(item.material(), item.name(), item.lore(), item.takeable(), actions));
                 currentGui.pages().put(pageId, page);
                 guiManager.getGUIs().put(currentGui.name(), currentGui);
-                return true;
+                return currentGui.name();
             }
             case "set_message" -> {
                 GUIItem item = page.items().get(slot);
@@ -57,21 +57,21 @@ public record EditSession(CustomGUI gui, String state, int slot, int pageId, Lis
                 page.items().put(slot, new GUIItem(item.material(), item.name(), item.lore(), item.takeable(), actions));
                 currentGui.pages().put(pageId, page);
                 guiManager.getGUIs().put(currentGui.name(), currentGui);
-                return true;
+                return currentGui.name();
             }
             case "set_page" -> {
                 try {
                     int targetPageId = Integer.parseInt(input);
-                    if (targetPageId < 1 || !currentGui.pages().containsKey(targetPageId)) return false;
+                    if (targetPageId < 1 || !currentGui.pages().containsKey(targetPageId)) return null;
                     GUIItem item = page.items().get(slot);
                     List<GUIAction> actions = new ArrayList<>(item.actions());
                     actions.add(new GUIAction("page", String.valueOf(targetPageId), false));
                     page.items().put(slot, new GUIItem(item.material(), item.name(), item.lore(), item.takeable(), actions));
                     currentGui.pages().put(pageId, page);
                     guiManager.getGUIs().put(currentGui.name(), currentGui);
-                    return true;
+                    return currentGui.name();
                 } catch (NumberFormatException e) {
-                    return false;
+                    return null;
                 }
             }
             case "set_sound" -> {
@@ -83,13 +83,13 @@ public record EditSession(CustomGUI gui, String state, int slot, int pageId, Lis
                     page.items().put(slot, new GUIItem(item.material(), item.name(), item.lore(), item.takeable(), actions));
                     currentGui.pages().put(pageId, page);
                     guiManager.getGUIs().put(currentGui.name(), currentGui);
-                    return true;
+                    return currentGui.name();
                 } catch (IllegalArgumentException e) {
-                    return false;
+                    return null;
                 }
             }
             default -> {
-                return false;
+                return null;
             }
         }
     }

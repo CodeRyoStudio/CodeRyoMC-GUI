@@ -81,9 +81,15 @@ public class EventListener implements Listener {
             new BukkitRunnable() {
                 @Override
                 public void run() {
-                    if (session.handleInput(player, input, plugin)) {
+                    String newGuiName = session.handleInput(player, input, plugin);
+                    if (newGuiName != null) {
                         plugin.getDataStorage().saveGUIsAsync();
-                        GUIEditor.openEditor(player, plugin.getGuiManager().getGUI(session.gui().name()), session.pageId());
+                        CustomGUI updatedGui = plugin.getGuiManager().getGUI(newGuiName);
+                        if (updatedGui != null) {
+                            GUIEditor.openEditor(player, updatedGui, session.pageId());
+                        } else {
+                            player.sendMessage("§c無法找到更新的 GUI，請重新編輯！");
+                        }
                         plugin.setEditSession(player.getUniqueId(), null);
                     } else {
                         player.sendMessage("§c無效輸入，請重新輸入或使用 /coderyogui cancel");

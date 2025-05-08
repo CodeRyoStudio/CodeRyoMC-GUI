@@ -9,7 +9,9 @@ public record GUIAction(String type, String value, boolean asConsole) {
     public void execute(Player player) {
         switch (type) {
             case "command" -> {
-                String command = value.replace("%player%", player.getName());
+                // 移除顏色代碼
+                String cleanValue = ChatColor.stripColor(value);
+                String command = cleanValue.replace("%player%", player.getName());
                 System.out.println("Executing command: " + command + ", asConsole: " + asConsole + ", player: " + player.getName());
                 if (asConsole) {
                     if (!player.hasPermission("coderyogui.use.console")) return;

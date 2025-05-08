@@ -35,22 +35,19 @@ public class GUIEditor {
         editor.setItem(1, createItem(Material.PAPER, "§a設置行數: " + gui.rows()));
         editor.setItem(2, createItem(Material.GREEN_WOOL, "§a添加頁面"));
         editor.setItem(3, createItem(Material.RED_WOOL, "§a刪除當前頁面"));
-        // 上一頁按鈕
         if (pageId > 1) {
             editor.setItem(4, createItem(Material.ARROW, "§a上一頁 (" + pageId + "/" + gui.pages().size() + ")"));
         } else {
             editor.setItem(4, createItem(Material.GRAY_STAINED_GLASS_PANE, "§7上一頁 (無)"));
         }
-        // 下一頁按鈕
         if (pageId < gui.pages().size()) {
             editor.setItem(5, createItem(Material.ARROW, "§a下一頁 (" + pageId + "/" + gui.pages().size() + ")"));
         } else {
             editor.setItem(5, createItem(Material.GRAY_STAINED_GLASS_PANE, "§7下一頁 (無)"));
         }
-        editor.setItem(6, createItem(Material.CHEST, "§a設置頁面可拿取: " + gui.pages().get(pageId).allowTake()));
-        editor.setItem(7, createItem(Material.HOPPER, "§a設置頁面可存放: " + gui.pages().get(pageId).allowPlace()));
+        editor.setItem(6, createItem(Material.CHEST, "§a設置頁面可交互: " + gui.pages().get(pageId).allowInteract()));
         GUIPage page = gui.pages().getOrDefault(pageId, new GUIPage());
-        int maxSlots = Math.min(gui.rows() * 9, 45); // 限制最大格子數，確保 9 + i <= 53
+        int maxSlots = Math.min(gui.rows() * 9, 45);
         for (int i = 0; i < maxSlots; i++) {
             editor.setItem(9 + i, page.items().getOrDefault(i, new GUIItem("AIR", null, null, false, List.of())).toItemStack());
         }
@@ -58,7 +55,7 @@ public class GUIEditor {
     }
 
     public static void openItemSelect(Player player, CustomGUI gui, int slot, int pageId) {
-        Inventory select = Bukkit.createInventory(new EditorHolder(gui, pageId), 36, "選擇物品");
+        Inventory select = Bukkit.createInventory(new EditorHolder(gui, pageId, slot), 36, "選擇物品");
         for (int i = 0; i < 36; i++) {
             select.setItem(i, createItem(Material.GRAY_STAINED_GLASS_PANE, " "));
         }
@@ -70,7 +67,7 @@ public class GUIEditor {
     }
 
     public static void openActionSelect(Player player, CustomGUI gui, int slot, int pageId) {
-        Inventory select = Bukkit.createInventory(new EditorHolder(gui, pageId), 36, "選擇動作");
+        Inventory select = Bukkit.createInventory(new EditorHolder(gui, pageId, slot), 36, "選擇動作");
         for (int i = 0; i < 36; i++) {
             select.setItem(i, createItem(Material.GRAY_STAINED_GLASS_PANE, " "));
         }
@@ -79,14 +76,14 @@ public class GUIEditor {
         select.setItem(2, createItem(Material.PAPER, "§a發送訊息"));
         select.setItem(3, createItem(Material.BOOK, "§a換頁"));
         select.setItem(4, createItem(Material.NOTE_BLOCK, "§a設置音效"));
-        select.setItem(5, createItem(Material.CHEST, "§a設置可拿取: " + gui.pages().get(pageId).items().get(slot).takeable()));
+        select.setItem(5, createItem(Material.CHEST, "§a設置可拿取: " + gui.pages().get(pageId).items().getOrDefault(slot, new GUIItem("AIR", null, null, false, List.of())).takeable()));
         select.setItem(6, createItem(Material.NAME_TAG, "§a設置物品名稱"));
         select.setItem(7, createItem(Material.WRITTEN_BOOK, "§a設置 Lore"));
         player.openInventory(select);
     }
 
     public static void openSoundSelect(Player player, CustomGUI gui, int slot, int pageId) {
-        Inventory select = Bukkit.createInventory(new EditorHolder(gui, pageId), 36, "選擇音效");
+        Inventory select = Bukkit.createInventory(new EditorHolder(gui, pageId, slot), 36, "選擇音效");
         for (int i = 0; i < 36; i++) {
             select.setItem(i, createItem(Material.GRAY_STAINED_GLASS_PANE, " "));
         }
@@ -106,7 +103,7 @@ public class GUIEditor {
             ItemStack item = createItem(Material.PAPER, "§a" + i + " 行" + (gui.rows() == i ? " §7(當前)" : ""));
             if (gui.rows() == i) {
                 ItemMeta meta = item.getItemMeta();
-                meta.addEnchant(Enchantment.UNBREAKING, 1, true); // 使用 UNBREAKING 附魔模擬發光
+                meta.addEnchant(Enchantment.UNBREAKING, 1, true);
                 item.setItemMeta(meta);
             }
             select.setItem(i - 1, item);

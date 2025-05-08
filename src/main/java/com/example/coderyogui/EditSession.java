@@ -1,5 +1,6 @@
 package com.example.coderyogui;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -20,20 +21,21 @@ public record EditSession(CustomGUI gui, String state, int slot, int pageId, Lis
             case "set_name" -> {
                 guiManager.getGUIs().put(input, new CustomGUI(input, currentGui.rows(), currentGui.pages()));
                 guiManager.getGUIs().remove(currentGui.name());
-                return input; // 返回新名稱
+                return input;
             }
             case "set_item_id" -> {
                 if (Material.matchMaterial(input) == null) return null;
-                page.items().put(slot, new GUIItem(input, null, null, false, new ArrayList<>()));
-                currentGui.pages().put(pageId, page);
+                page.items().put(slot, new GUIItem(input, null, null, true, new ArrayList<>()));
+                gui.pages().put(pageId, page);
                 guiManager.getGUIs().put(currentGui.name(), currentGui);
                 return currentGui.name();
             }
             case "set_item_name" -> {
                 GUIItem item = page.items().get(slot);
                 page.items().put(slot, new GUIItem(item.material(), input, item.lore(), item.takeable(), item.actions()));
-                currentGui.pages().put(pageId, page);
+                gui.pages().put(pageId, page);
                 guiManager.getGUIs().put(currentGui.name(), currentGui);
+                plugin.getLogger().info("Set item name: " + input + " for slot: " + slot);
                 return currentGui.name();
             }
             case "set_lore_line" -> {
@@ -44,9 +46,14 @@ public record EditSession(CustomGUI gui, String state, int slot, int pageId, Lis
             case "set_command" -> {
                 GUIItem item = page.items().get(slot);
                 List<GUIAction> actions = new ArrayList<>(item.actions());
-                actions.add(new GUIAction("command", input, tempData.contains("console")));
-                page.items().put(slot, new GUIItem(item.material(), item.name(), item.lore(), item.takeable(), actions));
-                currentGui.pages().put(pageId, page);
+                // 移除前導 /（如果有），保存不包含 /
+                String command = input.startsWith("/") ? input.substring(1) : input;
+                // 明確檢查 tempData 是否包含 "console"
+                boolean asConsole = tempData != null && tempData.contains("console");
+                plugin.getLogger().info("Saving command: " + command + ", asConsole: " + asConsole + ", tempData: " + tempData);
+                actions.add(new GUIAction("command", command, asConsole));
+                page.items().put(slot, new GUIItem(item.material(), item.name(), item.lore(), true, actions));
+                gui.pages().put(pageId, page);
                 guiManager.getGUIs().put(currentGui.name(), currentGui);
                 return currentGui.name();
             }
@@ -54,8 +61,8 @@ public record EditSession(CustomGUI gui, String state, int slot, int pageId, Lis
                 GUIItem item = page.items().get(slot);
                 List<GUIAction> actions = new ArrayList<>(item.actions());
                 actions.add(new GUIAction("message", input, false));
-                page.items().put(slot, new GUIItem(item.material(), item.name(), item.lore(), item.takeable(), actions));
-                currentGui.pages().put(pageId, page);
+                page.items().put(slot, new GUIItem(item.material(), item.name(), item.lore(), true, actions));
+                gui.pages().put(pageId, page);
                 guiManager.getGUIs().put(currentGui.name(), currentGui);
                 return currentGui.name();
             }
@@ -66,8 +73,8 @@ public record EditSession(CustomGUI gui, String state, int slot, int pageId, Lis
                     GUIItem item = page.items().get(slot);
                     List<GUIAction> actions = new ArrayList<>(item.actions());
                     actions.add(new GUIAction("page", String.valueOf(targetPageId), false));
-                    page.items().put(slot, new GUIItem(item.material(), item.name(), item.lore(), item.takeable(), actions));
-                    currentGui.pages().put(pageId, page);
+                    page.items().put(slot, new GUIItem(item.material(), item.name(), item.lore(), true, actions));
+                    gui.pages().put(pageId, page);
                     guiManager.getGUIs().put(currentGui.name(), currentGui);
                     return currentGui.name();
                 } catch (NumberFormatException e) {
@@ -80,8 +87,8 @@ public record EditSession(CustomGUI gui, String state, int slot, int pageId, Lis
                     GUIItem item = page.items().get(slot);
                     List<GUIAction> actions = new ArrayList<>(item.actions());
                     actions.add(new GUIAction("sound", input, false));
-                    page.items().put(slot, new GUIItem(item.material(), item.name(), item.lore(), item.takeable(), actions));
-                    currentGui.pages().put(pageId, page);
+                    page.items().put(slot, new GUIItem(item.material(), item.name(), item.lore(), true, actions));
+                    gui.pages().put(pageId, page);
                     guiManager.getGUIs().put(currentGui.name(), currentGui);
                     return currentGui.name();
                 } catch (IllegalArgumentException e) {

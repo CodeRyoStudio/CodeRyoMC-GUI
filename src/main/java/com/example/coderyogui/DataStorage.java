@@ -43,8 +43,9 @@ public class DataStorage {
             if (pagesSection != null) {
                 for (String pageId : pagesSection.getKeys(false)) {
                     ConfigurationSection pageSection = pagesSection.getConfigurationSection(pageId);
-                    boolean allowTake = pageSection.getBoolean("allow_take", false);
-                    boolean allowPlace = pageSection.getBoolean("allow_place", false);
+                    // 兼容舊數據：如果有 allow_take 或 allow_place，轉換為 allow_interact
+                    boolean allowInteract = pageSection.getBoolean("allow_interact", 
+                        pageSection.getBoolean("allow_take", false) || pageSection.getBoolean("allow_place", false));
                     Map<Integer, GUIItem> items = new HashMap<>();
                     ConfigurationSection itemsSection = pageSection.getConfigurationSection("items");
                     if (itemsSection != null) {
@@ -68,7 +69,7 @@ public class DataStorage {
                             items.put(Integer.parseInt(slot), new GUIItem(material, itemName, lore, takeable, actions));
                         }
                     }
-                    pages.put(Integer.parseInt(pageId), new GUIPage(items, allowTake, allowPlace));
+                    pages.put(Integer.parseInt(pageId), new GUIPage(items, allowInteract));
                 }
             }
             plugin.getGuiManager().getGUIs().put(name, new CustomGUI(name, rows, pages));
@@ -86,8 +87,7 @@ public class DataStorage {
                 for (Map.Entry<Integer, GUIPage> pageEntry : gui.pages().entrySet()) {
                     ConfigurationSection pageSection = pagesSection.createSection(String.valueOf(pageEntry.getKey()));
                     GUIPage page = pageEntry.getValue();
-                    pageSection.set("allow_take", page.allowTake());
-                    pageSection.set("allow_place", page.allowPlace());
+                    pageSection.set("allow_interact", page.allowInteract());
                     ConfigurationSection itemsSection = pageSection.createSection("items");
                     for (Map.Entry<Integer, GUIItem> itemEntry : page.items().entrySet()) {
                         ConfigurationSection itemSection = itemsSection.createSection(String.valueOf(itemEntry.getKey()));

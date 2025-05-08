@@ -9,12 +9,14 @@ public record GUIAction(String type, String value, boolean asConsole) {
     public void execute(Player player) {
         switch (type) {
             case "command" -> {
+                String command = value.replace("%player%", player.getName());
+                System.out.println("Executing command: " + command + ", asConsole: " + asConsole + ", player: " + player.getName());
                 if (asConsole) {
                     if (!player.hasPermission("coderyogui.use.console")) return;
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), value.replace("%player%", player.getName()));
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
                 } else {
                     if (!player.hasPermission("coderyogui.use")) return;
-                    Bukkit.dispatchCommand(player, value.replace("%player%", player.getName()));
+                    Bukkit.dispatchCommand(player, command);
                 }
             }
             case "message" -> player.sendMessage(ChatColor.translateAlternateColorCodes('&', value));

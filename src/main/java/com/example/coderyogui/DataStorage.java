@@ -19,8 +19,15 @@ public class DataStorage {
     public DataStorage(CoderyoGUI plugin) {
         this.plugin = plugin;
         this.file = new File(plugin.getDataFolder(), "guis.yml");
+        if (!file.getParentFile().exists()) {
+            file.getParentFile().mkdirs();
+        }
         if (!file.exists()) {
-            plugin.saveResource("guis.yml", false);
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                plugin.getLogger().severe("無法創建 guis.yml: " + e.getMessage());
+            }
         }
         this.config = YamlConfiguration.loadConfiguration(file);
     }

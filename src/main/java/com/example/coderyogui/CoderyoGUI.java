@@ -13,7 +13,6 @@ public class CoderyoGUI extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        saveDefaultConfig();
         guiManager = new GUIManager(this);
         dataStorage = new DataStorage(this);
         editSessions = new HashMap<>();

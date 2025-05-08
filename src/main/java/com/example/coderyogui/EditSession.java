@@ -50,6 +50,11 @@ public record EditSession(CustomGUI gui, String state, int slot, int pageId, Lis
                 return currentGui.name();
             case "set_item_name":
                 GUIItem item = page.items().get(slot);
+                if (item == null) {
+                    player.sendMessage("§c請先為該槽位設置一個物品！");
+                    plugin.getLogger().warning("玩家 " + player.getName() + " 嘗試為 GUI " + currentGui.name() + " 的頁面 " + pageId + " 槽位 " + slot + " 設置名稱，但槽位為空");
+                    return null;
+                }
                 page.items().put(slot, new GUIItem(item.material(), input, item.lore(), item.takeable(), item.actions()));
                 currentGui.pages().put(pageId, page);
                 guiManager.getGUIs().put(currentGui.name(), currentGui);

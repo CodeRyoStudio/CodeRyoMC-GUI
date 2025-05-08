@@ -1,0 +1,33 @@
+# Maven 編譯生成的檔案
+target/
+*.jar
+*.war
+*.ear
+
+# IDE 相關檔案
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+
+# 日誌檔案
+*.log
+logs/
+
+# 操作系統生成的檔案
+.DS_Store
+Thumbs.db
+
+# 本地配置檔案
+*.local
+
+# Maven 緩存（通常不在項目中，但以防萬一）
+.m2/
+dependency-reduced-pom.xml
+
+# 其他臨時檔案
+*.swp
+*.swo
+*~

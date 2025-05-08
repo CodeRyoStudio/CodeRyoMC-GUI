@@ -1,0 +1,24 @@
+name: CoderyoGUI
+version: 1.0
+main: com.example.coderyogui.CoderyoGUI
+api-version: 1.21
+commands:
+  coderyogui:
+    description: 管理自定義 GUI
+    usage: /<command> <create|open|edit|cancel> [name]
+permissions:
+  coderyogui.create:
+    description: 允許創建 GUI
+    default: op
+  coderyogui.use:
+    description: 允許使用 GUI 和執行玩家命令
+    default: true
+  coderyogui.use.console:
+    description: 允許執行控制台命令
+    default: op
+  coderyogui.cancel:
+    description: 允許取消編輯輸入
+    default: true
+  coderyogui.edit.*:
+    description: 允許編輯所有 GUI
+    default: op

@@ -178,8 +178,9 @@ public class EventListener implements Listener {
         EditSession session = plugin.getEditSession(player.getUniqueId());
         if (session != null) {
             event.setCancelled(true);
+            event.getRecipients().clear(); // 清空接收者，防止訊息傳播
             String input = event.getMessage();
-            plugin.getLogger().info("Processing chat input: " + input + " for player: " + player.getName());
+            plugin.getLogger().info("Processing chat input: " + input + " for player: " + player.getName() + ", cancelled: " + event.isCancelled());
             new BukkitRunnable() {
                 @Override
                 public void run() {

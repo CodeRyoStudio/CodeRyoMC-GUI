@@ -42,26 +42,47 @@ public record EditSession(CustomGUI gui, String state, int slot, int pageId, Lis
                     player.sendMessage("§c無效物品 ID，請輸入如 STONE");
                     return null;
                 }
+                // 使用 1-based 槽位
                 page.items().put(slot, new GUIItem(input, null, null, true, new ArrayList<>()));
-                gui.pages().put(pageId, page);
+                currentGui.pages().put(pageId, page);
                 guiManager.getGUIs().put(currentGui.name(), currentGui);
+                plugin.getLogger().info("設置物品 ID: " + input + " 於槽位: " + slot);
                 return currentGui.name();
             case "set_item_name":
                 GUIItem item = page.items().get(slot);
                 page.items().put(slot, new GUIItem(item.material(), input, item.lore(), item.takeable(), item.actions()));
-                gui.pages().put(pageId, page);
+                currentGui.pages().put(pageId, page);
                 guiManager.getGUIs().put(currentGui.name(), currentGui);
-                plugin.getLogger().info("Set item name: " + input + " for slot: " + slot);
+                plugin.getLogger().info("設置物品名稱: " + input + " 於槽位: " + slot);
                 return currentGui.name();
             case "set_command":
                 GUIItem cmdItem = page.items().get(slot);
-                List<GUIAction> actions = new ArrayList<>(cmdItem.actions());
+                List<GUIAction> actions;
+                String material;
+                String itemName;
+                List<String> lore;
+                boolean takeable;
+                // 如果槽位為空，創建一個默認 GUIItem
+                if (cmdItem == null) {
+                    plugin.getLogger().warning("槽位 " + slot + " 無物品，為設置命令創建默認 GUIItem（材質: AIR）");
+                    material = "AIR";
+                    itemName = null;
+                    lore = new ArrayList<>();
+                    takeable = true;
+                    actions = new ArrayList<>();
+                } else {
+                    material = cmdItem.material();
+                    itemName = cmdItem.name();
+                    lore = cmdItem.lore();
+                    takeable = cmdItem.takeable();
+                    actions = new ArrayList<>(cmdItem.actions());
+                }
                 String command = input.startsWith("/") ? input.substring(1) : input;
                 boolean asConsole = tempData != null && tempData.contains("console");
-                plugin.getLogger().info("Saving command: " + command + ", asConsole: " + asConsole + ", tempData: " + tempData);
+                plugin.getLogger().info("保存命令: " + command + ", asConsole: " + asConsole + ", 槽位: " + slot);
                 actions.add(new GUIAction("command", command, asConsole));
-                page.items().put(slot, new GUIItem(cmdItem.material(), cmdItem.name(), cmdItem.lore(), true, actions));
-                gui.pages().put(pageId, page);
+                page.items().put(slot, new GUIItem(material, itemName, lore, takeable, actions));
+                currentGui.pages().put(pageId, page);
                 guiManager.getGUIs().put(currentGui.name(), currentGui);
                 player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
                 player.sendMessage("§a命令已設置！");

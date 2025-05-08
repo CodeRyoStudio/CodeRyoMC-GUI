@@ -49,8 +49,9 @@ public class GUIEditor {
         editor.setItem(7, createItem(Material.CHEST, "§a設置頁面可交互: " + page.allowInteract(), List.of("§7點擊切換交互狀態")));
         editor.setItem(8, createItem(Material.SPYGLASS, "§a預覽 GUI", List.of("§7查看最終效果")));
         int maxSlots = Math.min(gui.rows() * 9, 45);
+        // 從槽位 1 開始（對應最終 GUI 的槽位 1）
         for (int i = 0; i < maxSlots; i++) {
-            editor.setItem(9 + i, page.items().getOrDefault(i, new GUIItem("AIR", null, null, false, List.of())).toItemStack());
+            editor.setItem(9 + i, page.items().getOrDefault(i + 1, new GUIItem("AIR", null, null, false, List.of())).toItemStack());
         }
         player.openInventory(editor);
     }
@@ -64,7 +65,9 @@ public class GUIEditor {
             );
         }
 
-        Inventory menu = Bukkit.createInventory(new EditorHolder(gui, pageId, slot), 9, "物品設置");
+        // 將槽位從編輯介面的 0-based 調整為最終 GUI 的 1-based
+        int adjustedSlot = slot + 1;
+        Inventory menu = Bukkit.createInventory(new EditorHolder(gui, pageId, adjustedSlot), 9, "物品設置");
         menu.setItem(0, createItem(Material.PAPER, "§a選擇物品", List.of("§7設置槽位物品")));
         menu.setItem(1, createItem(Material.COMMAND_BLOCK, "§a設置玩家命令", List.of("§7添加執行命令")));
         menu.setItem(2, createItem(Material.COMMAND_BLOCK, "§a設置控制台命令", List.of("§7添加控制台命令")));
@@ -82,7 +85,9 @@ public class GUIEditor {
             );
         }
 
-        Inventory select = Bukkit.createInventory(new EditorHolder(gui, pageId, slot, searchPage, search), 54, search == null ? "選擇物品" : "搜尋物品: " + search);
+        // 將槽位從編輯介面的 0-based 調整為最終 GUI 的 1-based
+        int adjustedSlot = slot + 1;
+        Inventory select = Bukkit.createInventory(new EditorHolder(gui, pageId, adjustedSlot, searchPage, search), 54, search == null ? "選擇物品" : "搜尋物品: " + search);
         for (int i = 0; i < 54; i++) {
             select.setItem(i, createItem(Material.GRAY_STAINED_GLASS_PANE, " "));
         }

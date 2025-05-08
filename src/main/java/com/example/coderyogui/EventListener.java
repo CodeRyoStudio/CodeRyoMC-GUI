@@ -52,7 +52,7 @@ public class EventListener implements Listener {
                 inputHandler.openSignInput(player, "輸入新 GUI 名稱", input -> handleInput(player, input));
             } else if (slot == 1) {
                 if (!player.hasPermission("coderyogui.use")) {
-                    player.sendMessage("§c無權限打開 GUI！");
+                    player.sendMessage("§c無權限打開 GUI！"); 
                     return;
                 }
                 new GUIListGUI(plugin, 1, false, null).open(player);
@@ -256,7 +256,9 @@ public class EventListener implements Listener {
                     player.openInventory(gui.getPage(pageId));
                 } else if (slot >= 9 && slot < 9 + gui.rows() * 9) {
                     if (event.getClick() == ClickType.RIGHT) {
-                        GUIEditor.openContextMenu(player, gui, slot - 9, pageId);
+                        // 將槽位從編輯介面的 0-based 調整為最終 GUI 的 1-based
+                        int adjustedSlot = slot - 9;
+                        GUIEditor.openContextMenu(player, gui, adjustedSlot, pageId);
                     }
                 }
             } else if (title.equals("物品設置")) {

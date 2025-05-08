@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -13,12 +14,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GUIEditor {
-    private static final Material[] COMMON_ITEMS = {
+    public static final Material[] COMMON_ITEMS = {
         Material.GLASS_PANE, Material.STONE_BUTTON, Material.PAPER, Material.BOOK,
         Material.IRON_INGOT, Material.OAK_PLANKS, Material.REDSTONE, Material.FEATHER,
         Material.GUNPOWDER, Material.DIAMOND
     };
-    private static final Sound[] COMMON_SOUNDS = {
+    public static final Sound[] COMMON_SOUNDS = {
         Sound.ENTITY_EXPERIENCE_ORB_PICKUP, Sound.UI_BUTTON_CLICK, Sound.BLOCK_NOTE_BLOCK_PLING,
         Sound.ENTITY_PLAYER_LEVELUP, Sound.BLOCK_ANVIL_LAND, Sound.ENTITY_ARROW_HIT_PLAYER,
         Sound.BLOCK_GLASS_BREAK, Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, Sound.ENTITY_ENDERMAN_TELEPORT,
@@ -34,11 +35,23 @@ public class GUIEditor {
         editor.setItem(1, createItem(Material.PAPER, "§a設置行數: " + gui.rows()));
         editor.setItem(2, createItem(Material.GREEN_WOOL, "§a添加頁面"));
         editor.setItem(3, createItem(Material.RED_WOOL, "§a刪除當前頁面"));
-        editor.setItem(4, createItem(Material.ARROW, "§a切換頁面: " + pageId));
-        editor.setItem(5, createItem(Material.CHEST, "§a設置頁面可拿取: " + gui.pages().get(pageId).allowTake()));
-        editor.setItem(6, createItem(Material.HOPPER, "§a設置頁面可存放: " + gui.pages().get(pageId).allowPlace()));
+        // 上一頁按鈕
+        if (pageId > 1) {
+            editor.setItem(4, createItem(Material.ARROW, "§a上一頁 (" + pageId + "/" + gui.pages().size() + ")"));
+        } else {
+            editor.setItem(4, createItem(Material.GRAY_STAINED_GLASS_PANE, "§7上一頁 (無)"));
+        }
+        // 下一頁按鈕
+        if (pageId < gui.pages().size()) {
+            editor.setItem(5, createItem(Material.ARROW, "§a下一頁 (" + pageId + "/" + gui.pages().size() + ")"));
+        } else {
+            editor.setItem(5, createItem(Material.GRAY_STAINED_GLASS_PANE, "§7下一頁 (無)"));
+        }
+        editor.setItem(6, createItem(Material.CHEST, "§a設置頁面可拿取: " + gui.pages().get(pageId).allowTake()));
+        editor.setItem(7, createItem(Material.HOPPER, "§a設置頁面可存放: " + gui.pages().get(pageId).allowPlace()));
         GUIPage page = gui.pages().getOrDefault(pageId, new GUIPage());
-        for (int i = 0; i < gui.rows() * 9; i++) {
+        int maxSlots = Math.min(gui.rows() * 9, 45); // 限制最大格子數，確保 9 + i <= 53
+        for (int i = 0; i < maxSlots; i++) {
             editor.setItem(9 + i, page.items().getOrDefault(i, new GUIItem("AIR", null, null, false, List.of())).toItemStack());
         }
         player.openInventory(editor);
@@ -81,6 +94,23 @@ public class GUIEditor {
             select.setItem(i, createItem(Material.NOTE_BLOCK, "§a" + COMMON_SOUNDS[i].name()));
         }
         select.setItem(10, createItem(Material.NAME_TAG, "§a自定義音效 ID"));
+        player.openInventory(select);
+    }
+
+    public static void openRowSelect(Player player, CustomGUI gui, int pageId) {
+        Inventory select = Bukkit.createInventory(new EditorHolder(gui, pageId), 36, "選擇行數");
+        for (int i = 0; i < 36; i++) {
+            select.setItem(i, createItem(Material.GRAY_STAINED_GLASS_PANE, " "));
+        }
+        for (int i = 1; i <= 6; i++) {
+            ItemStack item = createItem(Material.PAPER, "§a" + i + " 行" + (gui.rows() == i ? " §7(當前)" : ""));
+            if (gui.rows() == i) {
+                ItemMeta meta = item.getItemMeta();
+                meta.addEnchant(Enchantment.UNBREAKING, 1, true); // 使用 UNBREAKING 附魔模擬發光
+                item.setItemMeta(meta);
+            }
+            select.setItem(i - 1, item);
+        }
         player.openInventory(select);
     }
 

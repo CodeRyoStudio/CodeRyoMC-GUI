@@ -1,0 +1,142 @@
+gui:
+  title:
+    main_menu: "主菜單"
+    select_item: "選擇物品"
+    search_item: "搜尋物品: {0}"
+    edit: "編輯: {0}"
+    item_settings: "物品設置"
+    select_rows: "選擇行數"
+    delete_gui_list: "選擇要刪除的 GUI"
+    search_delete_gui: "搜尋刪除 GUI: {0}"
+    confirm_delete: "確認刪除: {0}"
+message:
+  no_permission: "&c你沒有使用 /coderyogui 的權限！"
+  no_permission_create: "&c你沒有創建 GUI 的權限！"
+  no_permission_use: "&c你沒有打開 GUI 的權限！"
+  no_permission_edit: "&c你沒有編輯 GUI 的權限！"
+  no_permission_edit_specific: "&c你沒有編輯 GUI 的權限: {0}！"
+  no_permission_delete: "&c你沒有刪除 GUI 的權限！"
+  no_permission_lang: "&c你沒有更改語言的權限！"
+  invalid_usage_open: "&c用法: /coderyogui open <gui_name>"
+  invalid_usage_edit: "&c用法: /coderyogui edit <gui_name>"
+  invalid_usage_delete: "&c用法: /coderyogui del <gui_name>"
+  invalid_usage_lang: "&c用法: /coderyogui lang <en|zh|ja>"
+  invalid_subcommand: "&c無效子命令！可用: open, edit, del, lang"
+  gui_not_found: "&cGUI 不存在！"
+  gui_opened: "&a已打開 GUI: {0}"
+  editing_gui: "&a正在編輯 GUI: {0}"
+  main_menu_failed: "&c無法開啟主菜單，請聯繫管理員！"
+  delete_gui_list_failed: "&c無法開啟刪除 GUI 列表，請聯繫管理員！"
+  invalid_gui: "&c無效的 GUI 或頁面！"
+  returned_main_menu: "&a已返回主菜單"
+  page_switched_prev: "&a已切換到上一頁"
+  page_switched_next: "&a已切換到下一頁"
+  first_page: "&7這是第一頁"
+  delete_cancelled: "&a已取消刪除"
+  gui_update_failed: "&c無法找到更新的 GUI，請重新編輯！"
+  invalid_input: "&c無效輸入，請重新輸入"
+  input_session_expired: "&c輸入會話已過期，請重新操作！"
+  sign_input_failed: "&c無法開啟輸入界面，請移動到開闊區域！"
+  language_set: "&a語言已設為 {0}"
+  invalid_language: "&c無效語言！可用語言: en, zh, ja"
+  plugin_enabled: "CoderyoGUI 已啟用，命令 /coderyogui 已註冊"
+  plugin_disabled: "CoderyoGUI 已禁用"
+item:
+  return:
+    name: "&c返回"
+    lore: "&7點擊返回"
+  create_gui:
+    name: "&a創建新 GUI"
+    lore: "&7點擊創建"
+  open_gui:
+    name: "&a打開現有 GUI"
+    lore: "&7點擊打開"
+  edit_gui:
+    name: "&a編輯 GUI"
+    lore: "&7點擊編輯"
+  delete_gui:
+    name: "&c刪除 GUI"
+    lore: "&7點擊刪除"
+  gui_item:
+    name: "&a{0}"
+    lore_open: "&7點擊打開"
+    lore_edit: "&7右鍵編輯"
+    lore_delete: "&7點擊刪除"
+  set_name:
+    name: "&a設置名稱"
+    lore: "&7點擊輸入新名稱"
+  set_rows:
+    name: "&a設置行數: {0}"
+    lore: "&7點擊選擇行數"
+  add_page:
+    name: "&a添加頁面"
+    lore: "&7點擊添加新頁面"
+  delete_page:
+    name: "&a刪除當前頁面"
+    lore: "&7點擊刪除當前頁面"
+  prev_page:
+    name: "&a上一頁 ({0}/{1})"
+    lore: "&7點擊切換"
+  next_page:
+    name: "&a下一頁 ({0}/{1})"
+    lore: "&7點擊切換"
+  prev_page_none:
+    name: "&7上一頁 (無)"
+  next_page_none:
+    name: "&7下一頁 (無)"
+  set_interact:
+    name: "&a設置頁面可交互: {0}"
+    lore: "&7點擊切換交互狀態"
+  preview_gui:
+    name: "&a預覽 GUI"
+    lore: "&7查看最終效果"
+  select_item:
+    name: "&a選擇物品"
+    lore: "&7設置槽位物品"
+  set_player_command:
+    name: "&a設置玩家命令"
+    lore: "&7添加執行命令"
+  set_console_command:
+    name: "&a設置控制台命令"
+    lore: "&7添加控制台命令"
+  set_item_name:
+    name: "&a設置名稱"
+    lore: "&7自訂物品名稱"
+  search_item:
+    name: "&a搜尋物品"
+    lore: "&7輸入關鍵詞（如 diamond）"
+  search_gui:
+    name: "&a搜尋 GUI"
+    lore: "&7輸入 GUI 名稱關鍵詞"
+  material:
+    name: "&a{0}"
+    lore: "&7點擊選擇"
+  no_matching_items:
+    name: "&c無匹配物品"
+    lore: "&7請嘗試其他關鍵詞"
+  no_matching_gui:
+    name: "&c無可用 GUI"
+    lore: "&7請創建新 GUI 或嘗試其他關鍵詞"
+  row_select:
+    name: "&a{0} 行{1}"
+    current: " &7(當前)"
+  confirm_delete:
+    name: "&a確認刪除"
+    lore: "&7點擊確認"
+  cancel:
+    name: "&c取消"
+    lore: "&7點擊取消"
+sign:
+  prompt:
+    create_gui: "輸入新 GUI 名稱"
+    search_gui: "輸入 GUI 名稱關鍵詞"
+    set_gui_name: "輸入 GUI 名稱"
+    set_player_command: "輸入玩家命令（不含 /）"
+    set_console_command: "輸入控制台命令（不含 /）"
+    set_item_name: "輸入物品名稱"
+    search_item: "輸入物品名稱（如 diamond）"
+    multiline: "&7可使用多行輸入"
+    complete: "&7點擊完成"
+    retry_input: "重新輸入"
+command:
+  deleted_gui: "&a已刪除 GUI: {0}"

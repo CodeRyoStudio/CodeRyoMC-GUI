@@ -5,6 +5,6 @@ import java.util.Map;
 
 public record GUIPage(Map<Integer, GUIItem> items, boolean allowInteract) {
     public GUIPage() {
-        this(new HashMap<>(), false);
+        this(new HashMap<>(), true);
     }
 }

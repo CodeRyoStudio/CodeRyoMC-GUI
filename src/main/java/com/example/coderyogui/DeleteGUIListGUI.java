@@ -26,62 +26,61 @@ public class DeleteGUIListGUI {
     }
 
     public Inventory open(Player player) {
-        LanguageManager lang = plugin.getLanguageManager();
         try {
-            String title = search == null ? lang.getTranslation(player, "gui.title.delete_gui_list") : lang.getTranslation(player, "gui.title.search_delete_gui", search);
+            String title = search == null ? "選擇要刪除的 GUI" : "搜尋刪除 GUI: " + search;
             Inventory inv = Bukkit.createInventory(new DeleteGUIListHolder(page, search), 54, title);
+            // 填充背景
             for (int i = 0; i < 54; i++) {
-                inv.setItem(i, createItem(player, Material.GRAY_STAINED_GLASS_PANE, " ", null));
+                inv.setItem(i, createItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of()));
             }
-            inv.setItem(0, createItem(player, Material.BARRIER, "item.return.name", List.of("item.return.lore")));
-            inv.setItem(1, createItem(player, Material.COMPASS, "item.search_gui.name", List.of("item.search_gui.lore")));
+            // 返回按鈕
+            inv.setItem(0, createItem(Material.BARRIER, "§c返回主菜單", List.of("§7點擊返回")));
+            // 搜尋按鈕
+            inv.setItem(1, createItem(Material.COMPASS, "§a搜尋 GUI", List.of("§7輸入 GUI 名稱關鍵詞")));
+            // 顯示 GUI 列表
             List<String> guiNames = new ArrayList<>(guiManager.getGUIs().keySet()).stream()
                     .filter(name -> search == null || name.toLowerCase().contains(search.toLowerCase()))
                     .collect(Collectors.toList());
             int start = (page - 1) * 45;
             for (int i = 0; i < 45 && start + i < guiNames.size(); i++) {
                 String name = guiNames.get(start + i);
-                inv.setItem(9 + i, createItem(player, Material.PAPER, "item.gui_item.name", List.of("item.gui_item.lore_delete"), name));
+                inv.setItem(9 + i, createItem(Material.PAPER, "§a" + name, List.of("§7點擊刪除")));
             }
+            // 分頁控制
             if (page > 1) {
-                inv.setItem(52, createItem(player, Material.ARROW, "item.prev_page.name", List.of()));
-            } else {
-                inv.setItem(52, createItem(player, Material.GRAY_STAINED_GLASS_PANE, "item.prev_page_none.name", List.of()));
+                inv.setItem(52, createItem(Material.ARROW, "§a上一頁", List.of()));
             }
             if (start + 45 < guiNames.size()) {
-                inv.setItem(53, createItem(player, Material.ARROW, "item.next_page.name", List.of()));
-            } else {
-                inv.setItem(53, createItem(player, Material.GRAY_STAINED_GLASS_PANE, "item.next_page_none.name", List.of()));
+                inv.setItem(53, createItem(Material.ARROW, "§a下一頁", List.of()));
             }
+            // 無結果提示
             if (guiNames.isEmpty()) {
-                inv.setItem(9, createItem(player, Material.BOOK, "item.no_matching_gui.name", List.of("item.no_matching_gui.lore")));
+                inv.setItem(9, createItem(Material.BOOK, "§c無可用 GUI", List.of("§7請創建新 GUI 或嘗試其他關鍵詞")));
             }
             player.openInventory(inv);
-            plugin.getLogger().info("Opening delete GUI list for player " + player.getName() + ", page " + page + ", search: " + (search != null ? search : "none"));
+            plugin.getLogger().info("為玩家 " + player.getName() + " 開啟刪除 GUI 列表，第 " + page + " 頁，搜尋: " + (search != null ? search : "無"));
             return inv;
         } catch (Exception e) {
-            plugin.getLogger().severe("Failed to open delete GUI list: " + e.getMessage());
-            player.sendMessage(lang.getTranslation(player, "message.delete_gui_list_failed"));
+            plugin.getLogger().severe("開啟刪除 GUI 列表失敗: " + e.getMessage());
+            player.sendMessage("§c無法開啟刪除 GUI 列表，請聯繫管理員！");
             return null;
         }
     }
 
     public static Inventory openConfirm(Player player, String guiName) {
-        LanguageManager lang = ((CoderyoGUI) Bukkit.getPluginManager().getPlugin("CoderyoGUI")).getLanguageManager();
-        Inventory confirm = Bukkit.createInventory(new DeleteConfirmHolder(guiName), 9, lang.getTranslation(player, "gui.title.confirm_delete", guiName));
-        confirm.setItem(3, createItem(player, Material.GREEN_WOOL, "item.confirm_delete.name", List.of("item.confirm_delete.lore")));
-        confirm.setItem(5, createItem(player, Material.RED_WOOL, "item.cancel.name", List.of("item.cancel.lore")));
+        Inventory confirm = Bukkit.createInventory(new DeleteConfirmHolder(guiName), 9, "確認刪除: " + guiName);
+        confirm.setItem(3, createItem(Material.GREEN_WOOL, "§a確認刪除", List.of("§7點擊確認")));
+        confirm.setItem(5, createItem(Material.RED_WOOL, "§c取消", List.of("§7點擊取消")));
         player.openInventory(confirm);
         return confirm;
     }
 
-    private static ItemStack createItem(Player player, Material material, String nameKey, List<String> loreKeys, Object... args) {
-        LanguageManager lang = ((CoderyoGUI) Bukkit.getPluginManager().getPlugin("CoderyoGUI")).getLanguageManager();
+    private static ItemStack createItem(Material material, String name, List<String> lore) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.RESET + lang.getTranslation(player, nameKey, args));
-        if (loreKeys != null) {
-            meta.setLore(loreKeys.stream().map(key -> ChatColor.RESET + lang.getTranslation(player, key)).toList());
+        meta.setDisplayName(ChatColor.RESET + name);
+        if (lore != null) {
+            meta.setLore(lore.stream().map((String s) -> ChatColor.RESET + s).toList());
         }
         item.setItemMeta(meta);
         return item;

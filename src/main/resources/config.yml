@@ -1,8 +1,0 @@
-default_language: zh
-language_mappings:
-  zh_TW: zh
-  zh_HK: zh
-  en_US: en
-  en_GB: en
-  ja_JP: ja
-  default: en

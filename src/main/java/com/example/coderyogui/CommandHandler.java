@@ -15,12 +15,12 @@ public class CommandHandler implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("This command can only be used by players!");
+            sender.sendMessage("§c此命令僅限玩家使用！");
             return true;
         }
 
         if (!player.hasPermission("coderyogui.use")) {
-            player.sendMessage(plugin.getLanguageManager().getTranslation(player, "message.no_permission"));
+            player.sendMessage("§c無權限使用 /coderyogui！");
             return true;
         }
 
@@ -32,76 +32,55 @@ public class CommandHandler implements CommandExecutor {
         switch (args[0].toLowerCase()) {
             case "open":
                 if (args.length < 2) {
-                    player.sendMessage(plugin.getLanguageManager().getTranslation(player, "message.invalid_usage_open"));
+                    player.sendMessage("§c用法: /coderyogui open <GUI名>");
                     return true;
                 }
-                CustomGUI gui = plugin.getGuiManager().getGUI(args[1]);
-                if (gui == null) {
-                    player.sendMessage(plugin.getLanguageManager().getTranslation(player, "message.gui_not_found"));
+                CustomGUI openGui = plugin.getGuiManager().getGUI(args[1]);
+                if (openGui == null) {
+                    player.sendMessage("§cGUI 不存在！");
                     return true;
                 }
-                player.openInventory(gui.getPage(1));
-                player.sendMessage(plugin.getLanguageManager().getTranslation(player, "message.gui_opened", args[1]));
+                player.openInventory(openGui.getPage(1));
+                player.sendMessage("§a已打開 GUI: " + args[1]);
                 break;
 
             case "edit":
                 if (!player.hasPermission("coderyogui.edit.*")) {
-                    player.sendMessage(plugin.getLanguageManager().getTranslation(player, "message.no_permission_edit"));
+                    player.sendMessage("§c無權限編輯 GUI！");
                     return true;
                 }
                 if (args.length < 2) {
-                    player.sendMessage(plugin.getLanguageManager().getTranslation(player, "message.invalid_usage_edit"));
+                    player.sendMessage("§c用法: /coderyogui edit <GUI名>");
                     return true;
                 }
-                gui = plugin.getGuiManager().getGUI(args[1]);
-                if (gui == null) {
-                    player.sendMessage(plugin.getLanguageManager().getTranslation(player, "message.gui_not_found"));
+                CustomGUI editGui = plugin.getGuiManager().getGUI(args[1]);
+                if (editGui == null) {
+                    player.sendMessage("§cGUI 不存在！");
                     return true;
                 }
-                if (!player.hasPermission("coderyogui.edit." + args[1])) {
-                    player.sendMessage(plugin.getLanguageManager().getTranslation(player, "message.no_permission_edit_specific", args[1]));
-                    return true;
-                }
-                GUIEditor.openEditor(player, gui, 1);
-                player.sendMessage(plugin.getLanguageManager().getTranslation(player, "message.editing_gui", args[1]));
+                GUIEditor.openEditor(player, editGui, 1);
+                player.sendMessage("§a正在編輯 GUI: " + args[1]);
                 break;
 
             case "del":
                 if (!player.hasPermission("coderyogui.del")) {
-                    player.sendMessage(plugin.getLanguageManager().getTranslation(player, "message.no_permission_delete"));
+                    player.sendMessage("§c無權限刪除 GUI！");
                     return true;
                 }
                 if (args.length < 2) {
-                    player.sendMessage(plugin.getLanguageManager().getTranslation(player, "message.invalid_usage_delete"));
+                    player.sendMessage("§c用法: /coderyogui del <GUI名>");
                     return true;
                 }
                 if (plugin.getGuiManager().getGUIs().remove(args[1]) != null) {
                     plugin.getDataStorage().saveGUIsAsync();
-                    player.sendMessage(plugin.getLanguageManager().getTranslation(player, "command.deleted_gui", args[1]));
+                    player.sendMessage("§a已刪除 GUI: " + args[1]);
                 } else {
-                    player.sendMessage(plugin.getLanguageManager().getTranslation(player, "message.gui_not_found"));
-                }
-                break;
-
-            case "lang":
-                if (!player.hasPermission("coderyogui.lang")) {
-                    player.sendMessage(plugin.getLanguageManager().getTranslation(player, "message.no_permission_lang"));
-                    return true;
-                }
-                if (args.length < 2) {
-                    player.sendMessage(plugin.getLanguageManager().getTranslation(player, "message.invalid_usage_lang"));
-                    return true;
-                }
-                String lang = args[1].toLowerCase();
-                if (plugin.getLanguageManager().setPlayerLanguage(player, lang)) {
-                    player.sendMessage(plugin.getLanguageManager().getTranslation(player, "message.language_set", lang));
-                } else {
-                    player.sendMessage(plugin.getLanguageManager().getTranslation(player, "message.invalid_language"));
+                    player.sendMessage("§cGUI 不存在！");
                 }
                 break;
 
             default:
-                player.sendMessage(plugin.getLanguageManager().getTranslation(player, "message.invalid_subcommand"));
+                player.sendMessage("§c未知子命令！可用: open, edit, del");
                 break;
         }
         return true;

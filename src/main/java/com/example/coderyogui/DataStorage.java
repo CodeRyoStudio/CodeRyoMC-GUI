@@ -72,6 +72,11 @@ public class DataStorage {
                     pages.put(Integer.parseInt(pageId), new GUIPage(items, allowInteract));
                 }
             }
+            // 確保至少有一頁
+            if (pages.isEmpty()) {
+                pages.put(1, new GUIPage());
+                plugin.getLogger().warning("GUI " + name + " 缺少頁面數據，已自動添加 pageId=1");
+            }
             plugin.getGuiManager().getGUIs().put(name, new CustomGUI(name, rows, pages));
         }
     }

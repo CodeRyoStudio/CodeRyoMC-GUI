@@ -44,7 +44,7 @@ public class InputHandler {
                 public void run() {
                     block.setType(originalType);
                 }
-            }.runTaskLater(plugin, 20L * 5); // 5 秒後恢復
+            }.runTaskLater(plugin, 20L * 180); // 180 秒後恢復
         } catch (Exception e) {
             player.sendMessage("§c無法開啟輸入界面，請重試！");
             plugin.getLogger().severe("開啟告示牌輸入失敗: " + e.getMessage());

@@ -7,18 +7,23 @@ import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class InputHandler {
     private final CoderyoGUI plugin;
+    private final Map<Player, Location> activeSigns = new HashMap<>();
+    private final Map<Location, Material> originalBlocks = new HashMap<>();
 
     public InputHandler(CoderyoGUI plugin) {
         this.plugin = plugin;
+        startSignCleanupTask();
     }
 
     public void openSignInput(Player player, String prompt, Consumer<String> callback) {
         try {
-            // 檢查安全位置
             Location loc = findSafeSignLocation(player);
             if (loc == null) {
                 player.sendMessage("§c無法開啟輸入界面，請移動到開闊區域！");
@@ -35,40 +40,71 @@ public class InputHandler {
             sign.setLine(3, "§7點擊完成");
             sign.update();
 
-            // 打開告示牌界面（Paper API）
+            activeSigns.put(player, loc);
+            originalBlocks.put(loc, originalType);
             player.openSign(sign);
 
-            // 恢復原始方塊（延遲執行，避免干擾輸入）
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    block.setType(originalType);
-                }
-            }.runTaskLater(plugin, 20L * 180); // 180 秒後恢復
+            sign.setAllowedEditorUniqueId(player.getUniqueId());
+            sign.update();
         } catch (Exception e) {
             player.sendMessage("§c無法開啟輸入界面，請重試！");
             plugin.getLogger().severe("開啟告示牌輸入失敗: " + e.getMessage());
         }
     }
 
+    private void startSignCleanupTask() {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                Iterator<Map.Entry<Player, Location>> iterator = activeSigns.entrySet().iterator();
+                while (iterator.hasNext()) {
+                    Map.Entry<Player, Location> entry = iterator.next();
+                    Player player = entry.getKey();
+                    Location loc = entry.getValue();
+                    Block block = loc.getBlock();
+                    if (block.getType() != Material.OAK_SIGN) {
+                        iterator.remove();
+                        originalBlocks.remove(loc);
+                        continue;
+                    }
+                    Sign sign = (Sign) block.getState();
+                    if (sign.getAllowedEditorUniqueId() == null || !sign.getAllowedEditorUniqueId().equals(player.getUniqueId())) {
+                        block.setType(originalBlocks.getOrDefault(loc, Material.AIR));
+                        iterator.remove();
+                        originalBlocks.remove(loc);
+                    }
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 20L);
+    }
+
+    public void removeSign(Player player) {
+        Location loc = activeSigns.remove(player);
+        if (loc != null) {
+            loc.getBlock().setType(originalBlocks.getOrDefault(loc, Material.AIR));
+            originalBlocks.remove(loc);
+        }
+    }
+
+    // 新增 getter 方法
+    public Map<Player, Location> getActiveSigns() {
+        return activeSigns;
+    }
+
     private Location findSafeSignLocation(Player player) {
-        // 首先嘗試玩家下方 2 格
         Location loc = player.getLocation().subtract(0, 2, 0);
         if (isSafeLocation(loc)) {
             return loc;
         }
-        // 嘗試玩家頭部上方 2 格
         loc = player.getLocation().add(0, 2, 0);
         if (isSafeLocation(loc)) {
             return loc;
         }
-        // 無安全位置
         return null;
     }
 
     private boolean isSafeLocation(Location loc) {
         Block block = loc.getBlock();
-        // 檢查是否為空氣或可替換方塊（如短草、 tall grass）
         return block.getType().isAir() || block.getType() == Material.SHORT_GRASS || block.getType() == Material.TALL_GRASS;
     }
 }

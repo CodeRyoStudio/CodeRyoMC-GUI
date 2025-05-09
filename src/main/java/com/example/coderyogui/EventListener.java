@@ -1,10 +1,13 @@
 package com.example.coderyogui;
 
+import org.bukkit.Location; // 新增導入
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.SignChangeEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.InventoryHolder;
@@ -34,7 +37,6 @@ public class EventListener implements Listener {
         int slot = event.getSlot();
         int rawSlot = event.getRawSlot();
 
-        // 僅處理頂部庫存的點擊
         if (rawSlot != slot || rawSlot >= event.getInventory().getSize()) {
             return;
         }
@@ -52,7 +54,7 @@ public class EventListener implements Listener {
                 inputHandler.openSignInput(player, "輸入新 GUI 名稱", input -> handleInput(player, input));
             } else if (slot == 1) {
                 if (!player.hasPermission("coderyogui.use")) {
-                    player.sendMessage("§c無權限打開 GUI！"); 
+                    player.sendMessage("§c無權限打開 GUI！");
                     return;
                 }
                 new GUIListGUI(plugin, 1, false, null).open(player);
@@ -92,7 +94,6 @@ public class EventListener implements Listener {
                         }
                         CustomGUI gui = plugin.getGuiManager().getGUI(guiName);
                         if (gui != null) {
-                            // 確保頁面存在
                             if (!gui.pages().containsKey(1)) {
                                 gui.pages().put(1, new GUIPage());
                                 plugin.getLogger().warning("GUI " + guiName + " 缺少 pageId=1，已自動創建");
@@ -139,7 +140,6 @@ public class EventListener implements Listener {
                             player.sendMessage("§c無權限編輯 GUI！");
                             return;
                         }
-                        // 確保頁面存在
                         if (!gui.pages().containsKey(1)) {
                             gui.pages().put(1, new GUIPage());
                             plugin.getLogger().warning("GUI " + guiName + " 缺少 pageId=1，已自動創建");
@@ -209,7 +209,6 @@ public class EventListener implements Listener {
         } else if (holder instanceof EditorHolder editorHolder) {
             CustomGUI gui = editorHolder.getGUI();
             int pageId = editorHolder.getPageId();
-            // 確保頁面存在
             if (!gui.pages().containsKey(pageId)) {
                 gui.pages().put(pageId, new GUIPage());
                 plugin.getLogger().warning("GUI " + gui.name() + " 缺少 pageId=" + pageId + "，已自動創建");
@@ -256,7 +255,6 @@ public class EventListener implements Listener {
                     player.openInventory(gui.getPage(pageId));
                 } else if (slot >= 9 && slot < 9 + gui.rows() * 9) {
                     if (event.getClick() == ClickType.RIGHT) {
-                        // 將槽位從編輯介面的 0-based 調整為最終 GUI 的 1-based
                         int adjustedSlot = slot - 9;
                         GUIEditor.openContextMenu(player, gui, adjustedSlot, pageId);
                     }
@@ -318,7 +316,7 @@ public class EventListener implements Listener {
                 } else if (slot == 53) {
                     GUIEditor.openItemSelect(player, gui, editorHolder.getSlot(), pageId, search, searchPage + 1);
                     player.sendMessage("§a已切換到下一頁");
-                } else if (slot >= 9 && slot < 52) { // 排除分頁按鈕
+                } else if (slot >= 9 && slot < 52) {
                     List<Material> materials = Arrays.stream(Material.values())
                             .filter(Material::isItem)
                             .filter(m -> m != Material.AIR)
@@ -358,7 +356,6 @@ public class EventListener implements Listener {
         } else if (holder instanceof GUIHolder guiHolder) {
             CustomGUI gui = guiHolder.getGUI();
             int pageId = guiHolder.getPageId();
-            // 確保頁面存在
             if (!gui.pages().containsKey(pageId)) {
                 gui.pages().put(pageId, new GUIPage());
                 plugin.getLogger().warning("GUI " + gui.name() + " 缺少 pageId=" + pageId + "，已自動創建");
@@ -389,11 +386,11 @@ public class EventListener implements Listener {
         Player player = event.getPlayer();
         EditSession session = plugin.getEditSession(player.getUniqueId());
         if (session != null) {
-            // 合併多行輸入
             String input = Arrays.stream(event.getLines())
                     .filter(line -> line != null && !line.trim().isEmpty())
                     .collect(Collectors.joining(" ")).trim();
             plugin.getLogger().info("玩家 " + player.getName() + " 輸入告示牌內容: " + input + "，狀態: " + session.state());
+            inputHandler.removeSign(player);
             new BukkitRunnable() {
                 @Override
                 public void run() {
@@ -402,7 +399,6 @@ public class EventListener implements Listener {
                         plugin.getDataStorage().saveGUIsAsync();
                         CustomGUI updatedGui = plugin.getGuiManager().getGUI(newGuiName);
                         if (updatedGui != null) {
-                            // 確保頁面存在
                             if (!updatedGui.pages().containsKey(session.pageId())) {
                                 updatedGui.pages().put(session.pageId(), new GUIPage());
                                 plugin.getLogger().warning("GUI " + newGuiName + " 缺少 pageId=" + session.pageId() + "，已自動創建");
@@ -411,7 +407,6 @@ public class EventListener implements Listener {
                             GUIEditor.openEditor(player, updatedGui, session.pageId());
                         } else if (session.state().equals("create_gui")) {
                             CustomGUI newGui = plugin.getGuiManager().getGUI(newGuiName);
-                            // 確保新創建的 GUI 有第一頁
                             if (!newGui.pages().containsKey(1)) {
                                 newGui.pages().put(1, new GUIPage());
                                 plugin.getLogger().warning("新創建的 GUI " + newGuiName + " 缺少 pageId=1，已自動創建");
@@ -441,21 +436,40 @@ public class EventListener implements Listener {
         }
     }
 
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        inputHandler.removeSign(player);
+        plugin.setEditSession(player.getUniqueId(), null);
+    }
+
+    @EventHandler
+    public void onPlayerMove(PlayerMoveEvent event) {
+        Player player = event.getPlayer();
+        Location loc = inputHandler.getActiveSigns().get(player); // 使用 getter 方法
+        if (loc != null && player.getLocation().distance(loc) > 5) {
+            inputHandler.removeSign(player);
+            plugin.setEditSession(player.getUniqueId(), null);
+            player.sendMessage("§c輸入取消：移動過遠");
+        }
+    }
+
     private void handleInput(Player player, String input) {
         EditSession session = plugin.getEditSession(player.getUniqueId());
         if (session == null) {
             player.sendMessage("§c輸入會話已過期，請重新操作！");
+            inputHandler.removeSign(player);
             return;
         }
         new BukkitRunnable() {
             @Override
             public void run() {
                 String newGuiName = session.handleInput(player, input, plugin);
+                inputHandler.removeSign(player);
                 if (newGuiName != null) {
                     plugin.getDataStorage().saveGUIsAsync();
                     CustomGUI updatedGui = plugin.getGuiManager().getGUI(newGuiName);
                     if (updatedGui != null) {
-                        // 確保頁面存在
                         if (!updatedGui.pages().containsKey(session.pageId())) {
                             updatedGui.pages().put(session.pageId(), new GUIPage());
                             plugin.getLogger().warning("GUI " + newGuiName + " 缺少 pageId=" + session.pageId() + "，已自動創建");
@@ -464,7 +478,6 @@ public class EventListener implements Listener {
                         GUIEditor.openEditor(player, updatedGui, session.pageId());
                     } else if (session.state().equals("create_gui")) {
                         CustomGUI newGui = plugin.getGuiManager().getGUI(newGuiName);
-                        // 確保新創建的 GUI 有第一頁
                         if (!newGui.pages().containsKey(1)) {
                             newGui.pages().put(1, new GUIPage());
                             plugin.getLogger().warning("新創建的 GUI " + newGuiName + " 缺少 pageId=1，已自動創建");

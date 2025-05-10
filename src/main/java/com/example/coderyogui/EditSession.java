@@ -14,6 +14,7 @@ public record EditSession(CustomGUI gui, String state, int slot, int pageId, Lis
     }
 
     public String handleInput(Player player, String input, CoderyoGUI plugin) {
+        // 驗證輸入長度
         if (input.length() > 100) {
             player.sendMessage("§c輸入過長，最大 100 字符！");
             return null;
@@ -35,6 +36,23 @@ public record EditSession(CustomGUI gui, String state, int slot, int pageId, Lis
                 guiManager.getGUIs().put(input, newGui);
                 player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
                 player.sendMessage("§aGUI " + input + " 已創建！");
+                return input;
+            case "set_name":
+                if (input.isEmpty() || input.length() > 32) {
+                    player.sendMessage("§c名稱無效，需 1-32 字");
+                    return null;
+                }
+                if (guiManager.getGUIs().containsKey(input) && !input.equals(currentGui.name())) {
+                    player.sendMessage("§cGUI 名稱已存在，請選擇其他名稱");
+                    return null;
+                }
+                // 更新 GUI 名稱
+                guiManager.getGUIs().remove(currentGui.name());
+                CustomGUI updatedGui = new CustomGUI(input, currentGui.rows(), currentGui.pages());
+                guiManager.getGUIs().put(input, updatedGui);
+                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+                player.sendMessage("§aGUI 名稱已更新為 " + input + "！");
+                plugin.getDataStorage().saveGUIsAsync();
                 return input;
             case "set_item_id":
                 if (Material.matchMaterial(input) == null) {

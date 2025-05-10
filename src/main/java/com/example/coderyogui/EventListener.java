@@ -1,6 +1,6 @@
 package com.example.coderyogui;
 
-import org.bukkit.Location; // 新增導入
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -255,8 +255,7 @@ public class EventListener implements Listener {
                     player.openInventory(gui.getPage(pageId));
                 } else if (slot >= 9 && slot < 9 + gui.rows() * 9) {
                     if (event.getClick() == ClickType.RIGHT) {
-                        int adjustedSlot = slot - 9;
-                        GUIEditor.openContextMenu(player, gui, adjustedSlot, pageId);
+                        GUIEditor.openContextMenu(player, gui, slot, pageId);
                     }
                 }
             } else if (title.equals("物品設置")) {
@@ -287,6 +286,18 @@ public class EventListener implements Listener {
                         inputHandler.openSignInput(player, "輸入物品名稱", input -> handleInput(player, input));
                         break;
                     case 4:
+                        plugin.setEditSession(player.getUniqueId(), new EditSession(gui, "delete_item", itemSlot, pageId));
+                        handleInput(player, ""); // 直接處理刪除，無需輸入
+                        GUIEditor.openEditor(player, gui, pageId);
+                        break;
+                    case 5:
+                        if (page.items().containsKey(itemSlot)) {
+                            GUIEditor.openCommandManager(player, gui, itemSlot, pageId, 1);
+                        } else {
+                            player.sendMessage("§c請先為該槽位設置一個物品！");
+                        }
+                        break;
+                    case 8:
                         GUIEditor.openEditor(player, gui, pageId);
                         break;
                 }
@@ -316,7 +327,7 @@ public class EventListener implements Listener {
                 } else if (slot == 53) {
                     GUIEditor.openItemSelect(player, gui, editorHolder.getSlot(), pageId, search, searchPage + 1);
                     player.sendMessage("§a已切換到下一頁");
-                } else if (slot >= 9 && slot < 52) {
+                } else if (slot >= 9 && slot < 54) {
                     List<Material> materials = Arrays.stream(Material.values())
                             .filter(Material::isItem)
                             .filter(m -> m != Material.AIR)
@@ -351,6 +362,45 @@ public class EventListener implements Listener {
                     plugin.getGuiManager().getGUIs().put(gui.name(), updatedGui);
                     plugin.getDataStorage().saveGUIsAsync();
                     GUIEditor.openEditor(player, updatedGui, pageId);
+                }
+            } else if (title.startsWith("管理命令: ")) {
+                event.setCancelled(true);
+                if (gui == null) {
+                    player.sendMessage("§c無效 GUI！");
+                    new MainMenuGUI(plugin, 1).open(player);
+                    return;
+                }
+                int itemSlot = editorHolder.getSlot();
+                int commandPage = editorHolder.getSearchPage();
+                GUIItem item = page.items().get(itemSlot);
+                List<GUIAction> actions = item != null ? item.actions() : new ArrayList<>();
+                if (slot == 0) {
+                    GUIEditor.openContextMenu(player, gui, itemSlot, pageId);
+                } else if (slot == 1) {
+                    List<String> tempData = new ArrayList<>();
+                    tempData.add("new");
+                    plugin.setEditSession(player.getUniqueId(), new EditSession(gui, "set_command", itemSlot, pageId, tempData));
+                    player.closeInventory();
+                    inputHandler.openSignInput(player, "輸入新命令（不含 /）", input -> handleInput(player, input));
+                } else if (slot == 52 && commandPage > 1) {
+                    GUIEditor.openCommandManager(player, gui, itemSlot, pageId, commandPage - 1);
+                    player.sendMessage("§a已切換到上一頁");
+                } else if (slot == 53) {
+                    GUIEditor.openCommandManager(player, gui, itemSlot, pageId, commandPage + 1);
+                    player.sendMessage("§a已切換到下一頁");
+                } else if (slot >= 9 && slot < 54) {
+                    int index = (commandPage - 1) * 45 + (slot - 9);
+                    if (index < actions.size()) {
+                        if (event.getClick() == ClickType.LEFT) {
+                            plugin.setEditSession(player.getUniqueId(), new EditSession(gui, "edit_command", itemSlot, pageId, new ArrayList<>(Collections.singletonList(String.valueOf(index)))));
+                            player.closeInventory();
+                            inputHandler.openSignInput(player, "編輯命令（不含 /）", input -> handleInput(player, input));
+                        } else if (event.getClick() == ClickType.RIGHT) {
+                            plugin.setEditSession(player.getUniqueId(), new EditSession(gui, "delete_command", itemSlot, pageId, new ArrayList<>(Collections.singletonList(String.valueOf(index)))));
+                            handleInput(player, ""); // 直接處理刪除
+                            GUIEditor.openCommandManager(player, gui, itemSlot, pageId, commandPage);
+                        }
+                    }
                 }
             }
         } else if (holder instanceof GUIHolder guiHolder) {
@@ -446,7 +496,7 @@ public class EventListener implements Listener {
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
-        Location loc = inputHandler.getActiveSigns().get(player); // 使用 getter 方法
+        Location loc = inputHandler.getActiveSigns().get(player);
         if (loc != null && player.getLocation().distance(loc) > 5) {
             inputHandler.removeSign(player);
             plugin.setEditSession(player.getUniqueId(), null);

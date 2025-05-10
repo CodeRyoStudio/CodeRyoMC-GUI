@@ -14,7 +14,6 @@ public record EditSession(CustomGUI gui, String state, int slot, int pageId, Lis
     }
 
     public String handleInput(Player player, String input, CoderyoGUI plugin) {
-        // 驗證輸入長度
         if (input.length() > 100) {
             player.sendMessage("§c輸入過長，最大 100 字符！");
             return null;
@@ -42,7 +41,6 @@ public record EditSession(CustomGUI gui, String state, int slot, int pageId, Lis
                     player.sendMessage("§c無效物品 ID，請輸入如 STONE");
                     return null;
                 }
-                // 使用 1-based 槽位
                 page.items().put(slot, new GUIItem(input, null, null, true, new ArrayList<>()));
                 currentGui.pages().put(pageId, page);
                 guiManager.getGUIs().put(currentGui.name(), currentGui);
@@ -67,7 +65,6 @@ public record EditSession(CustomGUI gui, String state, int slot, int pageId, Lis
                 String itemName;
                 List<String> lore;
                 boolean takeable;
-                // 如果槽位為空，創建一個默認 GUIItem
                 if (cmdItem == null) {
                     plugin.getLogger().warning("槽位 " + slot + " 無物品，為設置命令創建默認 GUIItem（材質: AIR）");
                     material = "AIR";
@@ -92,11 +89,60 @@ public record EditSession(CustomGUI gui, String state, int slot, int pageId, Lis
                 player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
                 player.sendMessage("§a命令已設置！");
                 return currentGui.name();
+            case "edit_command":
+                GUIItem editItem = page.items().get(slot);
+                if (editItem == null || editItem.actions().isEmpty()) {
+                    player.sendMessage("§c該槽位無命令可編輯！");
+                    return null;
+                }
+                try {
+                    int commandIndex = Integer.parseInt(tempData.get(0));
+                    List<GUIAction> updatedActions = new ArrayList<>(editItem.actions());
+                    GUIAction oldAction = updatedActions.get(commandIndex);
+                    String newCommand = input.startsWith("/") ? input.substring(1) : input;
+                    updatedActions.set(commandIndex, new GUIAction("command", newCommand, oldAction.asConsole()));
+                    page.items().put(slot, new GUIItem(editItem.material(), editItem.name(), editItem.lore(), editItem.takeable(), updatedActions));
+                    currentGui.pages().put(pageId, page);
+                    guiManager.getGUIs().put(currentGui.name(), currentGui);
+                    player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+                    player.sendMessage("§a命令已更新！");
+                    return currentGui.name();
+                } catch (NumberFormatException | IndexOutOfBoundsException e) {
+                    player.sendMessage("§c無效命令索引！");
+                    plugin.getLogger().warning("編輯命令失敗，無效索引: " + e.getMessage());
+                    return null;
+                }
+            case "delete_command":
+                GUIItem delItem = page.items().get(slot);
+                if (delItem == null || delItem.actions().isEmpty()) {
+                    player.sendMessage("§c該槽位無命令可刪除！");
+                    return null;
+                }
+                try {
+                    int commandIndex = Integer.parseInt(tempData.get(0));
+                    List<GUIAction> delActions = new ArrayList<>(delItem.actions());
+                    delActions.remove(commandIndex);
+                    page.items().put(slot, new GUIItem(delItem.material(), delItem.name(), delItem.lore(), delItem.takeable(), delActions));
+                    currentGui.pages().put(pageId, page);
+                    guiManager.getGUIs().put(currentGui.name(), currentGui);
+                    player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
+                    player.sendMessage("§a命令已刪除！");
+                    return currentGui.name();
+                } catch (NumberFormatException | IndexOutOfBoundsException e) {
+                    player.sendMessage("§c無效命令索引！");
+                    plugin.getLogger().warning("刪除命令失敗，無效索引: " + e.getMessage());
+                    return null;
+                }
+            case "delete_item":
+                page.items().remove(slot);
+                currentGui.pages().put(pageId, page);
+                guiManager.getGUIs().put(currentGui.name(), currentGui);
+                player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
+                player.sendMessage("§a物品已移除！");
+                return currentGui.name();
             case "search_item":
-                // 搜尋物品，結果由 EventListener 處理
                 return input;
             case "search_gui":
-                // 搜尋 GUI，結果由 EventListener 處理
                 return input;
             default:
                 return null;

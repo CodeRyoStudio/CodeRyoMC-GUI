@@ -1,4 +1,4 @@
-package com.example.coderyogui;
+package com.coderyo.coderyogui;
 
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;

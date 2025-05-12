@@ -1,4 +1,4 @@
-package com.example.coderyogui;
+package com.coderyo.coderyogui;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;

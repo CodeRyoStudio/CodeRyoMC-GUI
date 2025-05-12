@@ -1,4 +1,4 @@
-package com.example.coderyogui;
+package com.coderyo.coderyogui;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -1,10 +1,10 @@
 name: CoderyoGUI
 version: 1.0
-main: com.example.coderyogui.CoderyoGUI
+main: com.coderyo.coderyogui.CoderyoGUI
 api-version: 1.13
 commands:
   coderyogui:
-    description: Main command for CoderyoGUI
+    description: Main command for Coderytoryogui
     usage: /<command> [open|edit|del] [args]
 permissions:
   coderyogui.use:

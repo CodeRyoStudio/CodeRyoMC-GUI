@@ -1,5 +1,6 @@
-package com.example.coderyogui;
+package com.coderyo.coderyogui;
 
+import com.coderyo.coderyogui.api.GUIClickEvent;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -413,6 +414,13 @@ public class EventListener implements Listener {
             }
             GUIPage page = gui.pages().get(pageId);
             GUIItem item = page.items().get(slot);
+            // 觸發 GUIClickEvent
+            GUIClickEvent clickEvent = new GUIClickEvent(player, gui, pageId, slot, item);
+            plugin.getServer().getPluginManager().callEvent(clickEvent);
+            if (clickEvent.isCancelled()) {
+                event.setCancelled(true);
+                return;
+            }
             if (slot == 0) {
                 event.setCancelled(true);
                 new MainMenuGUI(plugin, 1).open(player);

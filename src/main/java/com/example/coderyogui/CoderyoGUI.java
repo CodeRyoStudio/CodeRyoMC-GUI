@@ -1,5 +1,6 @@
-package com.example.coderyogui;
+package com.coderyo.coderyogui;
 
+import com.coderyo.coderyogui.api.CoderyoGUIAPI;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.HashMap;
@@ -13,13 +14,23 @@ public class CoderyoGUI extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        // 保存預設配置文件
+        saveDefaultConfig();
+        // 初始化核心組件
         this.guiManager = new GUIManager();
         this.dataStorage = new DataStorage(this);
         dataStorage.loadGUIs();
-        getCommand("coderyogui").setExecutor(new CommandHandler(this));
-        getCommand("coderyogui").setTabCompleter(new TabCompleterImpl(this));
+        // 初始化 API
+        CoderyoGUIAPI.init(this);
+        // 檢查是否作為依賴，設置內建功能啟用狀態
+        boolean enableFeatures = getConfig().getBoolean("enable-plugin-features", !isDependency());
+        if (enableFeatures) {
+            getCommand("coderyogui").setExecutor(new CommandHandler(this));
+            getCommand("coderyogui").setTabCompleter(new TabCompleterImpl(this));
+        }
+        // 始終註冊事件監聽器
         getServer().getPluginManager().registerEvents(new EventListener(this), this);
-        getLogger().info("CoderyoGUI 已啟用，命令 /coderyogui 已註冊");
+        getLogger().info("CoderyoGUI 已啟用，內建功能: " + (enableFeatures ? "啟用" : "禁用，僅提供 API"));
     }
 
     @Override
@@ -46,5 +57,15 @@ public class CoderyoGUI extends JavaPlugin {
         } else {
             editSessions.put(playerId, session);
         }
+    }
+
+    private boolean isDependency() {
+        for (org.bukkit.plugin.Plugin plugin : getServer().getPluginManager().getPlugins()) {
+            org.bukkit.plugin.PluginDescriptionFile desc = plugin.getDescription();
+            if (desc.getDepend().contains("CoderyoGUI") || desc.getSoftDepend().contains("CoderyoGUI")) {
+                return true;
+            }
+        }
+        return false;
     }
 }

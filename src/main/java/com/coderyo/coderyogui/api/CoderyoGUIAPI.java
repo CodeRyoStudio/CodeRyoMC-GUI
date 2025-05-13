@@ -33,7 +33,7 @@ public class CoderyoGUIAPI {
      */
     public static void init(CoderyoGUI plugin) {
         instance = new CoderyoGUIAPI(plugin);
-        // 註冊內建事件監聽器
+        // Register internal event listener
         plugin.getServer().getPluginManager().registerEvents(new InternalListener(plugin), plugin);
     }
 
@@ -53,7 +53,7 @@ public class CoderyoGUIAPI {
     /**
      * Creates a new GUI with the specified name and number of rows.
      *
-     * @param name The unique name of the GUI (1-32 characters, non-null).
+     * @param name The unique name of the GUI (1-32 characters, non-null, non-empty).
      * @param rows The number of rows in the GUI (1-6).
      * @return true if the GUI was created successfully, false if the name is invalid,
      *         rows are out of range, or the GUI already exists.
@@ -282,12 +282,11 @@ public class CoderyoGUIAPI {
 
         @EventHandler
         public void onGUIClick(GUIClickEvent event) {
-            // 僅在獨立運行（非依賴模式）且點擊欄位 0 時處理
+            // Only handle slot 0 when running standalone (not as a dependency)
             if (!plugin.isDependency() && event.isBackButton()) {
                 Player player = event.getPlayer();
                 event.setCancelled(true);
-                new MainMenuGUI(plugin, 1).open(player);
-                player.sendMessage("§a已返回主菜單");
+                plugin.openMainMenu(player);
             }
         }
     }

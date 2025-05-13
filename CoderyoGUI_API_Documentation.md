@@ -40,7 +40,7 @@ boolean createGUI(String name, int rows)
 ```
 - **Purpose**: Creates a new GUI with the specified name and number of rows.
 - **Parameters**:
-  - `name`: The unique name of the GUI (1-32 characters, non-null).
+  - `name`: The unique name of the GUI (1-32 characters, non-null, non-empty).
   - `rows`: The number of rows (1-6).
 - **Returns**: `true` if successful, `false` if the name is invalid, rows are out of range, or the GUI already exists.
 - **Example**:
@@ -237,10 +237,14 @@ The `GUIClickEvent` is fired when a player clicks a slot in a `CustomGUI` (ident
 - **getPageId()**: The page ID.
 - **getSlot()**: The slot index.
 - **getItem()**: The `GUIItem` in the slot (may be `null` if empty).
+- **isBackButton()**: Returns `true` if the clicked slot is the back button (slot 0), allowing custom handling of the back button.
 
 ### Methods
 - **isCancelled()**: Checks if the event is cancelled.
 - **setCancelled(boolean)**: Cancels the event, preventing `GUIAction` execution. Optional.
+
+### Customizing the Back Button (Slot 0)
+When `CoderyoGUI` is used as a dependency, slot 0 (back button) can be customized by listening for `GUIClickEvent` and checking `isBackButton()`. If no custom handler is provided, slot 0 has no default action. When running standalone, `CoderyoGUI` provides a default handler that opens the main menu.
 
 ### Example
 ```java
@@ -252,10 +256,11 @@ public class MyPlugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onGUIClick(GUIClickEvent event) {
-        if (event.getGui().name().equals("reward_gui") && event.getSlot() == 10) {
-            event.getPlayer().sendMessage("§eYou clicked the reward item!");
-            // Optionally cancel to prevent GUIAction execution
-            // event.setCancelled(true);
+        if (event.isBackButton()) {
+            Player player = event.getPlayer();
+            event.setCancelled(true);
+            player.sendMessage("§aYou clicked the back button!");
+            player.closeInventory(); // Custom action: close the GUI
         }
     }
 }
@@ -263,7 +268,7 @@ public class MyPlugin extends JavaPlugin implements Listener {
 
 ## Complete Example
 
-This example creates a GUI, adds an item with multiple actions, opens it for a player, and listens for clicks.
+This example creates a GUI, adds an item with multiple actions, opens it for a player, and handles back button clicks.
 
 ```java
 public class MyPlugin extends JavaPlugin implements Listener {
@@ -273,25 +278,55 @@ public class MyPlugin extends JavaPlugin implements Listener {
     }
 
     public void createRewardGUI(Player player) {
-        CoderyoGUIAPI api = CoderyoGUIAPI.getInstance();
-        api.createGUI("reward_gui", 3);
-        api.setItem("reward_gui", 1, 10, new GUIItemBuilder()
-            .material("DIAMOND")
-            .name("§aClaim Reward")
-            .lore(List.of("§7Click to claim"))
-            .takeable(true)
-            .addCommandAction("give %player% diamond 1", false)
-            .addMessageAction("§aYou claimed a reward!")
-            .addSoundAction("ENTITY_EXPERIENCE_ORB_PICKUP", 1.0f, 1.0f)
-            .addCloseAction()
-            .build());
-        api.openGUI(player, "reward_gui", 1);
+        try {
+            CoderyoGUIAPI api = CoderyoGUIAPI.getInstance();
+            String guiName = "reward_gui_" + player.getUniqueId().toString().substring(0, 8);
+            if (guiName.length() > 32) {
+                player.sendMessage("§cGUI name too long!");
+                return;
+            }
+
+            // Create a 3-row GUI
+            if (!api.createGUI(guiName, 3)) {
+                player.sendMessage("§cFailed to create GUI!");
+                return;
+            }
+
+            // Add a reward item in slot 10
+            GUIItem item = new GUIItemBuilder()
+                .material("DIAMOND")
+                .name("§aClaim Reward")
+                .lore(List.of("§7Click to claim"))
+                .takeable(true)
+                .addCommandAction("give %player% diamond 1", false)
+                .addMessageAction("§aYou claimed a reward!")
+                .addSoundAction("ENTITY_EXPERIENCE_ORB_PICKUP", 1.0f, 1.0f)
+                .addCloseAction()
+                .build();
+            api.setItem(guiName, 1, 10, item);
+
+            // Set page to non-interactable
+            api.setPageInteractable(guiName, 1, false);
+
+            // Open the GUI
+            if (!api.openGUI(player, guiName, 1)) {
+                player.sendMessage("§cFailed to open GUI!");
+            }
+        } catch (IllegalStateException e) {
+            player.sendMessage("§cCoderyoGUI not initialized!");
+            getLogger().severe("API error: " + e.getMessage());
+        }
     }
 
     @EventHandler
     public void onGUIClick(GUIClickEvent event) {
-        if (event.getGui().name().equals("reward_gui") && event.getSlot() == 10) {
-            event.getPlayer().sendMessage("§eEvent triggered: Reward clicked!");
+        Player player = event.getPlayer();
+        if (event.isBackButton()) {
+            event.setCancelled(true);
+            player.sendMessage("§aBack button clicked! Closing GUI.");
+            player.closeInventory();
+        } else if (event.getSlot() == 10) {
+            player.sendMessage("§eYou clicked the reward item!");
         }
     }
 }
@@ -299,9 +334,11 @@ public class MyPlugin extends JavaPlugin implements Listener {
 
 ## Notes
 - **Error Handling**: Always check return values (`boolean` or `null`) to handle invalid inputs (e.g., non-existent GUI).
+- **GUI Name Length**: The GUI name must be 1-32 characters long, non-null, and non-empty. Exceeding this limit will cause `createGUI` to return `false`.
 - **Optional Parameters**: `GUIItemBuilder` offers many optional settings (e.g., `name`, `lore`, `takeable`) with defaults, while `CoderyoGUIAPI` methods require all parameters.
 - **Data Persistence**: All API modifications are saved to `guis.yml` automatically.
-- **Event Cancellation**: Use `GUIClickEvent.setCancelled(true)` to prevent `GUIAction` execution if needed.
+- **Event Cancellation**: Use `GUIClickEvent.setCancelled(true)` to prevent `GUIAction` execution or default back button behavior.
+- **Back Button**: Slot 0 is reserved as the back button. Use `GUIClickEvent.isBackButton()` to customize its behavior when used as a dependency. In standalone mode, it opens the main menu by default.
 - **Testing**: Ensure `CoderyoGUI` is enabled and test with valid inputs to avoid exceptions.
 
 For further assistance or feature requests, contact the plugin developer.

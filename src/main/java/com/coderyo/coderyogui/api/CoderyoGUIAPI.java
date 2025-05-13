@@ -5,6 +5,8 @@ import com.coderyo.coderyogui.CustomGUI;
 import com.coderyo.coderyogui.GUIManager;
 import com.coderyo.coderyogui.GUIItem;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -19,12 +21,6 @@ public class CoderyoGUIAPI {
     private static CoderyoGUIAPI instance;
     private final CoderyoGUI plugin;
 
-    /**
-     * Constructs a new API instance with the specified plugin.
-     * This constructor is private to enforce singleton pattern.
-     *
-     * @param plugin The CoderyoGUI plugin instance.
-     */
     private CoderyoGUIAPI(CoderyoGUI plugin) {
         this.plugin = plugin;
     }
@@ -37,13 +33,15 @@ public class CoderyoGUIAPI {
      */
     public static void init(CoderyoGUI plugin) {
         instance = new CoderyoGUIAPI(plugin);
+        // 註冊內建事件監聽器
+        plugin.getServer().getPluginManager().registerEvents(new InternalListener(plugin), plugin);
     }
 
     /**
-     * Retrieves the singleton instance of the API.
+     * Gets the singleton instance of the API.
      *
      * @return The API instance.
-     * @throws IllegalStateException if the API has not been initialized.
+     * @throws IllegalStateException if the API is not initialized.
      */
     public static CoderyoGUIAPI getInstance() {
         if (instance == null) {
@@ -269,5 +267,28 @@ public class CoderyoGUIAPI {
      */
     public Set<String> listGUIs() {
         return Collections.unmodifiableSet(plugin.getGuiManager().getGUIs().keySet());
+    }
+
+    /**
+     * Internal listener to handle default behavior for slot 0 (back button) when
+     * CoderyoGUI is running standalone.
+     */
+    private static class InternalListener implements Listener {
+        private final CoderyoGUI plugin;
+
+        InternalListener(CoderyoGUI plugin) {
+            this.plugin = plugin;
+        }
+
+        @EventHandler
+        public void onGUIClick(GUIClickEvent event) {
+            // 僅在獨立運行（非依賴模式）且點擊欄位 0 時處理
+            if (!plugin.isDependency() && event.isBackButton()) {
+                Player player = event.getPlayer();
+                event.setCancelled(true);
+                new MainMenuGUI(plugin, 1).open(player);
+                player.sendMessage("§a已返回主菜單");
+            }
+        }
     }
 }

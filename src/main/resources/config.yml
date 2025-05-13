@@ -1,3 +1,3 @@
 # 是否啟用 CoderyoGUI 的內建功能（命令、主菜單等）
 # 預設：作為依賴時為 false，獨立運行時為 true
-enable-plugin-features: true
+enable-plugin-features: false

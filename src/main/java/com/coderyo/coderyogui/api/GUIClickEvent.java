@@ -18,6 +18,7 @@ public class GUIClickEvent extends Event implements Cancellable {
     private final int pageId;
     private final int slot;
     private final GUIItem item;
+    private final boolean isBackButton;
     private boolean cancelled;
 
     /**
@@ -30,11 +31,26 @@ public class GUIClickEvent extends Event implements Cancellable {
      * @param item   The GUIItem in the slot, or null if the slot is empty.
      */
     public GUIClickEvent(Player player, CustomGUI gui, int pageId, int slot, GUIItem item) {
+        this(player, gui, pageId, slot, item, slot == 0);
+    }
+
+    /**
+     * Constructs a new GUIClickEvent with back button indicator.
+     *
+     * @param player      The player who clicked the GUI.
+     * @param gui         The CustomGUI that was clicked.
+     * @param pageId      The ID of the page clicked.
+     * @param slot        The slot index clicked.
+     * @param item        The GUIItem in the slot, or null if the slot is empty.
+     * @param isBackButton True if the clicked slot is the back button (slot 0).
+     */
+    public GUIClickEvent(Player player, CustomGUI gui, int pageId, int slot, GUIItem item, boolean isBackButton) {
         this.player = player;
         this.gui = gui;
         this.pageId = pageId;
         this.slot = slot;
         this.item = item;
+        this.isBackButton = isBackButton;
         this.cancelled = false;
     }
 
@@ -81,6 +97,15 @@ public class GUIClickEvent extends Event implements Cancellable {
      */
     public GUIItem getItem() {
         return item;
+    }
+
+    /**
+     * Checks if the clicked slot is the back button (slot 0).
+     *
+     * @return True if the slot is the back button, false otherwise.
+     */
+    public boolean isBackButton() {
+        return isBackButton;
     }
 
     /**

@@ -421,11 +421,8 @@ public class EventListener implements Listener {
                 event.setCancelled(true);
                 return;
             }
-            if (slot == 0) {
-                event.setCancelled(true);
-                new MainMenuGUI(plugin, 1).open(player);
-                player.sendMessage("§a已返回主菜單");
-            } else if (page.allowInteract()) {
+            // 移除硬編碼的欄位 0 邏輯，依賴 GUIClickEvent 處理
+            if (page.allowInteract()) {
                 event.setCancelled(false);
                 if (item != null && !item.actions().isEmpty()) {
                     item.actions().forEach(action -> action.execute(player));

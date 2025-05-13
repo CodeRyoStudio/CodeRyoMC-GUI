@@ -35,17 +35,18 @@ public class CoderyoGUI extends JavaPlugin {
                 command.setExecutor(commandHandler);
                 command.setTabCompleter(new TabCompleterImpl(this));
             } else {
-                getLogger().warning("命令 'coderyogui' 未在 plugin.yml 中註冊！");
+                getLogger().warning("Command 'coderyogui' not registered in plugin.yml!");
             }
         }
 
         getServer().getPluginManager().registerEvents(new EventListener(this), this);
-        getLogger().info("CoderyoGUI 已啟用，內建功能: " + (enablePluginFeatures ? "啟用" : "禁用"));
+        getLogger().info("CoderyoGUI enabled, built-in features: " + (enablePluginFeatures ? "enabled" : "disabled"));
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("CoderyoGUI 已禁用");
+        guiManager.clearTemporaryGUIs();
+        getLogger().info("CoderyoGUI disabled");
     }
 
     public GUIManager getGuiManager() {
@@ -68,22 +69,12 @@ public class CoderyoGUI extends JavaPlugin {
         }
     }
 
-    /**
-     * Checks if the plugin is running as a dependency (i.e., plugin features are disabled).
-     *
-     * @return true if running as a dependency, false if running standalone.
-     */
     public boolean isDependency() {
         return dependencyMode;
     }
 
-    /**
-     * Opens the main menu GUI for a player.
-     *
-     * @param player The player to open the main menu for.
-     */
     public void openMainMenu(Player player) {
         new MainMenuGUI(this, 1).open(player);
-        player.sendMessage("§a已返回主菜單");
+        player.sendMessage("§aReturned to main menu");
     }
 }

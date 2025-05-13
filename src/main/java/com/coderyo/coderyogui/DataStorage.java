@@ -1,7 +1,10 @@
 package com.coderyo.coderyogui;
 
+import com.coderyo.coderyogui.api.ActionType; // Added import
+import com.coderyo.coderyogui.api.StringSanitizer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.yaml.snakeyaml.DumperOptions;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,87 +29,69 @@ public class DataStorage {
             try {
                 file.createNewFile();
             } catch (IOException e) {
-                plugin.getLogger().severe("無法創建 guis.yml: " + e.getMessage());
+                plugin.getLogger().severe("Failed to create guis.yml: " + e.getMessage());
             }
         }
         this.config = YamlConfiguration.loadConfiguration(file);
     }
 
     public void loadGUIs() {
-        ConfigurationSection guisSection = config.getConfigurationSection("guis");
-        if (guisSection == null) return;
-        for (String name : guisSection.getKeys(false)) {
-            try {
-                ConfigurationSection guiSection = guisSection.getConfigurationSection(name);
-                if (guiSection == null) {
-                    plugin.getLogger().warning("無效的 GUI 配置: " + name);
-                    continue;
-                }
-                int rows = guiSection.getInt("rows", 3);
-                Map<Integer, GUIPage> pages = new HashMap<>();
-                ConfigurationSection pagesSection = guiSection.getConfigurationSection("pages");
-                if (pagesSection != null) {
-                    for (String pageId : pagesSection.getKeys(false)) {
-                        try {
+        try {
+            ConfigurationSection guisSection = config.getConfigurationSection("guis");
+            if (guisSection == null) return;
+            for (String guiName : guisSection.getKeys(false)) {
+                try {
+                    ConfigurationSection guiSection = guisSection.getConfigurationSection(guiName);
+                    int rows = guiSection.getInt("rows", 3);
+                    Map<Integer, GUIPage> pages = new HashMap<>();
+                    ConfigurationSection pagesSection = guiSection.getConfigurationSection("pages");
+                    if (pagesSection != null) {
+                        for (String pageId : pagesSection.getKeys(false)) {
                             ConfigurationSection pageSection = pagesSection.getConfigurationSection(pageId);
-                            if (pageSection == null) {
-                                plugin.getLogger().warning("無效的頁面配置: GUI " + name + ", page " + pageId);
-                                continue;
-                            }
                             boolean allowInteract = pageSection.getBoolean("allow_interact",
                                     pageSection.getBoolean("allow_take", false) || pageSection.getBoolean("allow_place", false));
                             Map<Integer, GUIItem> items = new HashMap<>();
                             ConfigurationSection itemsSection = pageSection.getConfigurationSection("items");
                             if (itemsSection != null) {
                                 for (String slot : itemsSection.getKeys(false)) {
-                                    try {
-                                        ConfigurationSection itemSection = itemsSection.getConfigurationSection(slot);
-                                        if (itemSection == null) {
-                                            plugin.getLogger().warning("無效的物品配置: GUI " + name + ", page " + pageId + ", slot " + slot);
-                                            continue;
-                                        }
-                                        String material = itemSection.getString("material");
-                                        String itemName = itemSection.getString("name");
-                                        List<String> lore = itemSection.getStringList("lore");
-                                        boolean takeable = itemSection.getBoolean("takeable", false);
-                                        List<GUIAction> actions = new ArrayList<>();
-                                        List<Map<String, Object>> actionsList = (List<Map<String, Object>>) itemSection.get("actions");
-                                        if (actionsList != null) {
-                                            for (Map<String, Object> actionData : actionsList) {
-                                                try {
-                                                    String type = (String) actionData.get("type");
-                                                    String value = (String) actionData.get("value");
-                                                    if (type == null || value == null) {
-                                                        plugin.getLogger().warning("無效的動作配置: GUI " + name + ", page " + pageId + ", slot " + slot);
-                                                        continue;
-                                                    }
-                                                    Boolean asConsole = (Boolean) actionData.getOrDefault("as_console", false);
-                                                    actions.add(new GUIAction(type, value, asConsole));
-                                                } catch (Exception e) {
-                                                    plugin.getLogger().warning("解析動作失敗: GUI " + name + ", page " + pageId + ", slot " + slot + ": " + e.getMessage());
-                                                }
+                                    ConfigurationSection itemSection = itemsSection.getConfigurationSection(slot);
+                                    String material = itemSection.getString("material");
+                                    String itemName = itemSection.getString("name");
+                                    List<String> lore = itemSection.getStringList("lore");
+                                    boolean takeable = itemSection.getBoolean("takeable", false);
+                                    List<GUIAction> actions = new ArrayList<>();
+                                    List<Map<String, Object>> actionsList = (List<Map<String, Object>>) itemSection.get("actions");
+                                    if (actionsList != null) {
+                                        for (Map<String, Object> actionData : actionsList) {
+                                            String type = (String) actionData.get("type");
+                                            if (!ActionType.isValid(type)) {
+                                                plugin.getLogger().warning("Invalid action type in GUI " + guiName + ": " + type);
+                                                continue;
                                             }
+                                            String value = (String) actionData.get("value");
+                                            boolean asConsole = (Boolean) actionData.getOrDefault("as_console", false);
+                                            actions.add(new GUIAction(ActionType.valueOf(type.toUpperCase()), value, asConsole));
                                         }
-                                        items.put(Integer.parseInt(slot), new GUIItem(material, itemName, lore, takeable, actions));
-                                    } catch (Exception e) {
-                                        plugin.getLogger().warning("解析物品失敗: GUI " + name + ", page " + pageId + ", slot " + slot + ": " + e.getMessage());
                                     }
+                                    items.put(Integer.parseInt(slot), new GUIItem(material, itemName, lore, takeable, actions));
                                 }
                             }
                             pages.put(Integer.parseInt(pageId), new GUIPage(items, allowInteract));
-                        } catch (Exception e) {
-                            plugin.getLogger().warning("解析頁面失敗: GUI " + name + ", page " + pageId + ": " + e.getMessage());
                         }
                     }
+                    if (pages.isEmpty()) {
+                        pages.put(1, new GUIPage());
+                        plugin.getLogger().warning("GUI " + guiName + " has no pages, added pageId=1");
+                    }
+                    plugin.getGuiManager().getGUIs().put(guiName, new CustomGUI(guiName, rows, pages));
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Failed to load GUI " + guiName + ": " + e.getMessage());
+                    plugin.getServer().getConsoleSender().sendMessage("§c[CoderyoGUI] Failed to load GUI " + guiName + ". Check logs.");
                 }
-                if (pages.isEmpty()) {
-                    pages.put(1, new GUIPage());
-                    plugin.getLogger().warning("GUI " + name + " 缺少頁面數據，已自動添加 pageId=1");
-                }
-                plugin.getGuiManager().getGUIs().put(name, new CustomGUI(name, rows, pages));
-            } catch (Exception e) {
-                plugin.getLogger().severe("解析 GUI 失敗: " + name + ": " + e.getMessage());
             }
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to load guis.yml: " + e.getMessage());
+            plugin.getServer().getConsoleSender().sendMessage("§c[CoderyoGUI] Invalid guis.yml detected. Check logs for details.");
         }
     }
 
@@ -126,15 +111,19 @@ public class DataStorage {
                     for (Map.Entry<Integer, GUIItem> itemEntry : page.items().entrySet()) {
                         ConfigurationSection itemSection = itemsSection.createSection(String.valueOf(itemEntry.getKey()));
                         GUIItem item = itemEntry.getValue();
-                        itemSection.set("material", item.material());
-                        itemSection.set("name", sanitizeString(item.name()));
-                        itemSection.set("lore", sanitizeLore(item.lore()));
+                        itemSection.set("material", StringSanitizer.sanitize(item.material()));
+                        itemSection.set("name", StringSanitizer.sanitize(item.name()));
+                        itemSection.set("lore", item.lore().stream().map(StringSanitizer::sanitize).toList());
                         itemSection.set("takeable", item.takeable());
                         List<Map<String, Object>> actions = new ArrayList<>();
                         for (GUIAction action : item.actions()) {
+                            if (!ActionType.isValid(action.type().name())) {
+                                plugin.getLogger().warning("Skipping invalid action type: " + action.type() + " in GUI " + gui.name());
+                                continue;
+                            }
                             Map<String, Object> actionData = new HashMap<>();
-                            actionData.put("type", action.type());
-                            actionData.put("value", sanitizeString(action.value()));
+                            actionData.put("type", action.type().name().toLowerCase());
+                            actionData.put("value", StringSanitizer.sanitize(action.value()));
                             if (action.asConsole()) actionData.put("as_console", true);
                             actions.add(actionData);
                         }
@@ -145,24 +134,9 @@ public class DataStorage {
             try {
                 config.save(file);
             } catch (IOException e) {
-                plugin.getLogger().severe("保存 YAML 失敗: " + e.getMessage());
+                plugin.getLogger().severe("Failed to save guis.yml: " + e.getMessage());
+                plugin.getServer().getConsoleSender().sendMessage("§c[CoderyoGUI] Failed to save guis.yml. Check logs.");
             }
         });
-    }
-
-    private String sanitizeString(String input) {
-        if (input == null) return null;
-        return input.replaceAll("[\\n\\r\\t:;&?]", "").trim().substring(0, Math.min(input.length(), 100));
-    }
-
-    private List<String> sanitizeLore(List<String> lore) {
-        if (lore == null) return new ArrayList<>();
-        List<String> sanitized = new ArrayList<>();
-        for (String line : lore) {
-            if (line != null) {
-                sanitized.add(sanitizeString(line));
-            }
-        }
-        return sanitized;
     }
 }

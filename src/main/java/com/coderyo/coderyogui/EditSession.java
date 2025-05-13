@@ -1,6 +1,7 @@
 package com.coderyo.coderyogui;
 
-import org.bukkit.Bukkit;
+import com.coderyo.coderyogui.api.StringSanitizer;
+import com.coderyo.coderyogui.api.ActionType; // Added import
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -14,155 +15,389 @@ public record EditSession(CustomGUI gui, String state, int slot, int pageId, Lis
     }
 
     public String handleInput(Player player, String input, CoderyoGUI plugin) {
-        // 驗證輸入長度
-        if (input.length() > 100) {
-            player.sendMessage("§c輸入過長，最大 100 字符！");
+        if (input != null && input.length() > 100) {
+            if (player != null) {
+                player.sendMessage("§cInput exceeds 100 characters!");
+            }
+            plugin.getLogger().warning("Input too long: " + input);
             return null;
         }
+        String sanitizedInput = StringSanitizer.sanitize(input);
         GUIManager guiManager = plugin.getGuiManager();
         CustomGUI currentGui = gui;
         GUIPage page = currentGui != null ? currentGui.pages().get(pageId) : null;
         switch (state) {
             case "create_gui":
-                if (guiManager.getGUIs().containsKey(input)) {
-                    player.sendMessage("§cGUI 名稱已存在，請重試");
+                if (guiManager.getGUIs().containsKey(sanitizedInput) || guiManager.getTemporaryGUIs().containsKey(sanitizedInput)) {
+                    if (player != null) {
+                        player.sendMessage("§cGUI name already exists!");
+                    }
+                    plugin.getLogger().warning("GUI name exists: " + sanitizedInput);
                     return null;
                 }
-                if (input.isEmpty() || input.length() > 32) {
-                    player.sendMessage("§c名稱無效，需 1-32 字");
+                if (sanitizedInput == null || sanitizedInput.isEmpty() || sanitizedInput.length() > 32) {
+                    if (player != null) {
+                        player.sendMessage("§cName must be 1-32 characters!");
+                    }
+                    plugin.getLogger().warning("Invalid GUI name: " + sanitizedInput);
                     return null;
                 }
-                CustomGUI newGui = new CustomGUI(input, 3);
-                guiManager.getGUIs().put(input, newGui);
-                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
-                player.sendMessage("§aGUI " + input + " 已創建！");
-                return input;
+                CustomGUI newGui = new CustomGUI(sanitizedInput, 3);
+                guiManager.getGUIs().put(sanitizedInput, newGui);
+                if (player != null) {
+                    player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+                    player.sendMessage("§aGUI " + sanitizedInput + " created!");
+                }
+                plugin.getLogger().info("Created GUI: " + sanitizedInput);
+                return sanitizedInput;
             case "set_name":
-                if (input.isEmpty() || input.length() > 32) {
-                    player.sendMessage("§c名稱無效，需 1-32 字");
+                if (sanitizedInput == null || sanitizedInput.isEmpty() || sanitizedInput.length() > 32) {
+                    if (player != null) {
+                        player.sendMessage("§cName must be 1-32 characters!");
+                    }
+                    plugin.getLogger().warning("Invalid GUI name: " + sanitizedInput);
                     return null;
                 }
-                if (guiManager.getGUIs().containsKey(input) && !input.equals(currentGui.name())) {
-                    player.sendMessage("§cGUI 名稱已存在，請選擇其他名稱");
+                if (guiManager.getGUIs().containsKey(sanitizedInput) && !sanitizedInput.equals(currentGui.name())) {
+                    if (player != null) {
+                        player.sendMessage("§cGUI name already exists!");
+                    }
+                    plugin.getLogger().warning("GUI name exists: " + sanitizedInput);
                     return null;
                 }
-                // 更新 GUI 名稱
                 guiManager.getGUIs().remove(currentGui.name());
-                CustomGUI updatedGui = new CustomGUI(input, currentGui.rows(), currentGui.pages());
-                guiManager.getGUIs().put(input, updatedGui);
-                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
-                player.sendMessage("§aGUI 名稱已更新為 " + input + "！");
-                plugin.getDataStorage().saveGUIsAsync();
-                return input;
+                CustomGUI updatedGui = new CustomGUI(sanitizedInput, currentGui.rows(), currentGui.pages());
+                if (guiManager.isTemporary(currentGui.name())) {
+                    guiManager.getTemporaryGUIs().remove(currentGui.name());
+                    guiManager.getTemporaryGUIs().put(sanitizedInput, updatedGui);
+                } else {
+                    guiManager.getGUIs().put(sanitizedInput, updatedGui);
+                }
+                if (player != null) {
+                    player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+                    player.sendMessage("§aGUI name updated to " + sanitizedInput + "!");
+                }
+                plugin.getLogger().info("Updated GUI name to: " + sanitizedInput);
+                if (!guiManager.isTemporary(sanitizedInput)) {
+                    plugin.getDataStorage().saveGUIsAsync();
+                }
+                return sanitizedInput;
             case "set_item_id":
-                if (Material.matchMaterial(input) == null) {
-                    player.sendMessage("§c無效物品 ID，請輸入如 STONE");
+                if (Material.matchMaterial(sanitizedInput) == null) {
+                    if (player != null) {
+                        player.sendMessage("§cInvalid material ID: " + sanitizedInput);
+                    }
+                    plugin.getLogger().warning("Invalid material: " + sanitizedInput);
                     return null;
                 }
-                page.items().put(slot, new GUIItem(input, null, null, true, new ArrayList<>()));
+                page.items().put(slot, new GUIItem(sanitizedInput, null, new ArrayList<>(), true, new ArrayList<>()));
                 currentGui.pages().put(pageId, page);
                 guiManager.getGUIs().put(currentGui.name(), currentGui);
-                plugin.getLogger().info("設置物品 ID: " + input + " 於槽位: " + slot);
+                plugin.getLogger().info("Set material: " + sanitizedInput + " at slot: " + slot);
                 return currentGui.name();
             case "set_item_name":
-                GUIItem item = page.items().get(slot);
-                if (item == null) {
-                    player.sendMessage("§c請先為該槽位設置一個物品！");
-                    plugin.getLogger().warning("玩家 " + player.getName() + " 嘗試為 GUI " + currentGui.name() + " 的頁面 " + pageId + " 槽位 " + slot + " 設置名稱，但槽位為空");
+                if (page.items().get(slot) == null) {
+                    if (player != null) {
+                        player.sendMessage("§cNo item at slot " + slot + "!");
+                    }
+                    plugin.getLogger().warning("No item at slot " + slot + " in GUI " + currentGui.name());
                     return null;
                 }
-                page.items().put(slot, new GUIItem(item.material(), input, item.lore(), item.takeable(), item.actions()));
+                GUIItem item = page.items().get(slot);
+                page.items().put(slot, new GUIItem(item.material(), sanitizedInput, item.lore(), item.takeable(), item.actions()));
                 currentGui.pages().put(pageId, page);
                 guiManager.getGUIs().put(currentGui.name(), currentGui);
-                plugin.getLogger().info("設置物品名稱: " + input + " 於槽位: " + slot);
+                plugin.getLogger().info("Set item name: " + sanitizedInput + " at slot: " + slot);
+                return currentGui.name();
+            case "set_lore":
+                item = page.items().get(slot);
+                if (item == null) {
+                    if (player != null) {
+                        player.sendMessage("§cNo item at slot " + slot + "!");
+                    }
+                    plugin.getLogger().warning("No item at slot " + slot + " in GUI " + currentGui.name());
+                    return null;
+                }
+                List<String> lore = new ArrayList<>(item.lore());
+                lore.add(sanitizedInput);
+                page.items().put(slot, new GUIItem(item.material(), item.name(), lore, item.takeable(), item.actions()));
+                currentGui.pages().put(pageId, page);
+                guiManager.getGUIs().put(currentGui.name(), currentGui);
+                plugin.getLogger().info("Added lore line: " + sanitizedInput + " at slot: " + slot);
                 return currentGui.name();
             case "set_command":
-                GUIItem cmdItem = page.items().get(slot);
+                item = page.items().get(slot);
                 List<GUIAction> actions;
                 String material;
                 String itemName;
-                List<String> lore;
+                List<String> loreList;
                 boolean takeable;
-                if (cmdItem == null) {
-                    plugin.getLogger().warning("槽位 " + slot + " 無物品，為設置命令創建默認 GUIItem（材質: AIR）");
+                if (item == null) {
+                    plugin.getLogger().warning("No item at slot " + slot + ", creating default GUIItem");
                     material = "AIR";
                     itemName = null;
-                    lore = new ArrayList<>();
+                    loreList = new ArrayList<>();
                     takeable = true;
                     actions = new ArrayList<>();
                 } else {
-                    material = cmdItem.material();
-                    itemName = cmdItem.name();
-                    lore = cmdItem.lore();
-                    takeable = cmdItem.takeable();
-                    actions = new ArrayList<>(cmdItem.actions());
+                    material = item.material();
+                    itemName = item.name();
+                    loreList = item.lore();
+                    takeable = item.takeable();
+                    actions = new ArrayList<>(item.actions());
                 }
-                String command = input.startsWith("/") ? input.substring(1) : input;
+                String command = sanitizedInput != null && sanitizedInput.startsWith("/") ? sanitizedInput.substring(1) : sanitizedInput;
                 boolean asConsole = tempData != null && tempData.contains("console");
-                plugin.getLogger().info("保存命令: " + command + ", asConsole: " + asConsole + ", 槽位: " + slot);
-                actions.add(new GUIAction("command", command, asConsole));
-                page.items().put(slot, new GUIItem(material, itemName, lore, takeable, actions));
+                actions.add(new GUIAction(ActionType.COMMAND, command, asConsole));
+                page.items().put(slot, new GUIItem(material, itemName, loreList, takeable, actions));
                 currentGui.pages().put(pageId, page);
                 guiManager.getGUIs().put(currentGui.name(), currentGui);
-                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
-                player.sendMessage("§a命令已設置！");
-                return currentGui.name();
-            case "edit_command":
-                GUIItem editItem = page.items().get(slot);
-                if (editItem == null || editItem.actions().isEmpty()) {
-                    player.sendMessage("§c該槽位無命令可編輯！");
-                    return null;
-                }
-                try {
-                    int commandIndex = Integer.parseInt(tempData.get(0));
-                    List<GUIAction> updatedActions = new ArrayList<>(editItem.actions());
-                    GUIAction oldAction = updatedActions.get(commandIndex);
-                    String newCommand = input.startsWith("/") ? input.substring(1) : input;
-                    updatedActions.set(commandIndex, new GUIAction("command", newCommand, oldAction.asConsole()));
-                    page.items().put(slot, new GUIItem(editItem.material(), editItem.name(), editItem.lore(), editItem.takeable(), updatedActions));
-                    currentGui.pages().put(pageId, page);
-                    guiManager.getGUIs().put(currentGui.name(), currentGui);
+                if (player != null) {
                     player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
-                    player.sendMessage("§a命令已更新！");
-                    return currentGui.name();
-                } catch (NumberFormatException | IndexOutOfBoundsException e) {
-                    player.sendMessage("§c無效命令索引！");
-                    plugin.getLogger().warning("編輯命令失敗，無效索引: " + e.getMessage());
+                    player.sendMessage("§aCommand set!");
+                }
+                plugin.getLogger().info("Set command: " + command + ", asConsole: " + asConsole + ", at slot: " + slot);
+                return currentGui.name();
+            case "set_message_action":
+                item = page.items().get(slot);
+                if (item == null) {
+                    if (player != null) {
+                        player.sendMessage("§cNo item at slot " + slot + "!");
+                    }
+                    plugin.getLogger().warning("No item at slot " + slot + " in GUI " + currentGui.name());
                     return null;
                 }
-            case "delete_command":
-                GUIItem delItem = page.items().get(slot);
-                if (delItem == null || delItem.actions().isEmpty()) {
-                    player.sendMessage("§c該槽位無命令可刪除！");
+                actions = new ArrayList<>(item.actions());
+                actions.add(new GUIAction(ActionType.MESSAGE, sanitizedInput));
+                page.items().put(slot, new GUIItem(item.material(), item.name(), item.lore(), item.takeable(), actions));
+                currentGui.pages().put(pageId, page);
+                guiManager.getGUIs().put(currentGui.name(), currentGui);
+                if (player != null) {
+                    player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+                    player.sendMessage("§aMessage action set!");
+                }
+                plugin.getLogger().info("Set message: " + sanitizedInput + " at slot: " + slot);
+                return currentGui.name();
+            case "set_sound_action":
+                item = page.items().get(slot);
+                if (item == null) {
+                    if (player != null) {
+                        player.sendMessage("§cNo item at slot " + slot + "!");
+                    }
+                    plugin.getLogger().warning("No item at slot " + slot + " in GUI " + currentGui.name());
                     return null;
                 }
                 try {
-                    int commandIndex = Integer.parseInt(tempData.get(0));
-                    List<GUIAction> delActions = new ArrayList<>(delItem.actions());
-                    delActions.remove(commandIndex);
-                    page.items().put(slot, new GUIItem(delItem.material(), delItem.name(), delItem.lore(), delItem.takeable(), delActions));
-                    currentGui.pages().put(pageId, page);
+                    Sound.valueOf(sanitizedInput.toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    if (player != null) {
+                        player.sendMessage("§cInvalid sound: " + sanitizedInput);
+                    }
+                    plugin.getLogger().warning("Invalid sound: " + sanitizedInput);
+                    return null;
+                }
+                actions = new ArrayList<>(item.actions());
+                actions.add(new GUIAction(ActionType.SOUND, sanitizedInput));
+                page.items().put(slot, new GUIItem(item.material(), item.name(), item.lore(), item.takeable(), actions));
+                currentGui.pages().put(pageId, page);
+                guiManager.getGUIs().put(currentGui.name(), currentGui);
+                if (player != null) {
+                    player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+                    player.sendMessage("§aSound action set!");
+                }
+                plugin.getLogger().info("Set sound: " + sanitizedInput + " at slot: " + slot);
+                return currentGui.name();
+            case "set_close_action":
+                item = page.items().get(slot);
+                if (item == null) {
+                    if (player != null) {
+                        player.sendMessage("§cNo item at slot " + slot + "!");
+                    }
+                    plugin.getLogger().warning("No item at slot " + slot + " in GUI " + currentGui.name());
+                    return null;
+                }
+                actions = new ArrayList<>(item.actions());
+                actions.add(new GUIAction(ActionType.CLOSE, "close"));
+                page.items().put(slot, new GUIItem(item.material(), item.name(), item.lore(), item.takeable(), actions));
+                currentGui.pages().put(pageId, page);
+                guiManager.getGUIs().put(currentGui.name(), currentGui);
+                if (player != null) {
+                    player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+                    player.sendMessage("§aClose action set!");
+                }
+                plugin.getLogger().info("Set close action at slot: " + slot);
+                return currentGui.name();
+            case "set_takeable":
+                item = page.items().get(slot);
+                if (item == null) {
+                    if (player != null) {
+                        player.sendMessage("§cNo item at slot " + slot + "!");
+                    }
+                    plugin.getLogger().warning("No item at slot " + slot + " in GUI " + currentGui.name());
+                    return null;
+                }
+                boolean takeableValue;
+                try {
+                    takeableValue = Boolean.parseBoolean(sanitizedInput);
+                } catch (Exception e) {
+                    if (player != null) {
+                        player.sendMessage("§cInvalid takeable value: " + sanitizedInput);
+                    }
+                    plugin.getLogger().warning("Invalid takeable value: " + sanitizedInput);
+                    return null;
+                }
+                page.items().put(slot, new GUIItem(item.material(), item.name(), item.lore(), takeableValue, item.actions()));
+                currentGui.pages().put(pageId, page);
+                guiManager.getGUIs().put(currentGui.name(), currentGui);
+                plugin.getLogger().info("Set takeable: " + takeableValue + " at slot: " + slot);
+                return currentGui.name();
+            case "set_page_interact":
+                boolean allowInteract;
+                try {
+                    allowInteract = Boolean.parseBoolean(sanitizedInput);
+                } catch (Exception e) {
+                    if (player != null) {
+                        player.sendMessage("§cInvalid interact value: " + sanitizedInput);
+                    }
+                    plugin.getLogger().warning("Invalid interact value: " + sanitizedInput);
+                    return null;
+                }
+                page = new GUIPage(page.items(), allowInteract);
+                currentGui.pages().put(pageId, page);
+                guiManager.getGUIs().put(currentGui.name(), currentGui);
+                if (player != null) {
+                    player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+                    player.sendMessage("§aPage interact set to: " + allowInteract);
+                }
+                plugin.getLogger().info("Set page interact: " + allowInteract + " for page: " + pageId);
+                return currentGui.name();
+            case "add_page":
+                try {
+                    int newPageId = Integer.parseInt(sanitizedInput);
+                    if (newPageId < 1 || currentGui.pages().containsKey(newPageId)) {
+                        if (player != null) {
+                            player.sendMessage("§cInvalid or existing page ID: " + newPageId);
+                        }
+                        plugin.getLogger().warning("Invalid page ID: " + newPageId);
+                        return null;
+                    }
+                    currentGui.pages().put(newPageId, new GUIPage());
                     guiManager.getGUIs().put(currentGui.name(), currentGui);
-                    player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
-                    player.sendMessage("§a命令已刪除！");
+                    if (player != null) {
+                        player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+                        player.sendMessage("§aPage " + newPageId + " added!");
+                    }
+                    plugin.getLogger().info("Added page: " + newPageId + " to GUI: " + currentGui.name());
                     return currentGui.name();
-                } catch (NumberFormatException | IndexOutOfBoundsException e) {
-                    player.sendMessage("§c無效命令索引！");
-                    plugin.getLogger().warning("刪除命令失敗，無效索引: " + e.getMessage());
+                } catch (NumberFormatException e) {
+                    if (player != null) {
+                        player.sendMessage("§cInvalid page ID: " + sanitizedInput);
+                    }
+                    plugin.getLogger().warning("Invalid page ID: " + sanitizedInput);
+                    return null;
+                }
+            case "remove_page":
+                try {
+                    int removePageId = Integer.parseInt(sanitizedInput);
+                    if (!currentGui.pages().containsKey(removePageId)) {
+                        if (player != null) {
+                            player.sendMessage("§cPage not found: " + removePageId);
+                        }
+                        plugin.getLogger().warning("Page not found: " + removePageId);
+                        return null;
+                    }
+                    if (currentGui.pages().size() <= 1) {
+                        if (player != null) {
+                            player.sendMessage("§cCannot remove the last page!");
+                        }
+                        plugin.getLogger().warning("Cannot remove last page in GUI: " + currentGui.name());
+                        return null;
+                    }
+                    currentGui.pages().remove(removePageId);
+                    guiManager.getGUIs().put(currentGui.name(), currentGui);
+                    if (player != null) {
+                        player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+                        player.sendMessage("§aPage " + removePageId + " removed!");
+                    }
+                    plugin.getLogger().info("Removed page: " + removePageId + " from GUI: " + currentGui.name());
+                    return currentGui.name();
+                } catch (NumberFormatException e) {
+                    if (player != null) {
+                        player.sendMessage("§cInvalid page ID: " + sanitizedInput);
+                    }
+                    plugin.getLogger().warning("Invalid page ID: " + sanitizedInput);
                     return null;
                 }
             case "delete_item":
                 page.items().remove(slot);
                 currentGui.pages().put(pageId, page);
                 guiManager.getGUIs().put(currentGui.name(), currentGui);
-                player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
-                player.sendMessage("§a物品已移除！");
+                if (player != null) {
+                    player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
+                    player.sendMessage("§aItem removed!");
+                }
+                plugin.getLogger().info("Removed item at slot: " + slot + " in GUI: " + currentGui.name());
                 return currentGui.name();
+            case "delete_gui":
+                if (guiManager.getGUIs().remove(sanitizedInput) != null || guiManager.getTemporaryGUIs().remove(sanitizedInput) != null) {
+                    if (player != null) {
+                        player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
+                        player.sendMessage("§aGUI " + sanitizedInput + " deleted!");
+                    }
+                    plugin.getLogger().info("Deleted GUI: " + sanitizedInput);
+                    return sanitizedInput;
+                }
+                if (player != null) {
+                    player.sendMessage("§cGUI not found: " + sanitizedInput);
+                }
+                plugin.getLogger().warning("GUI not found: " + sanitizedInput);
+                return null;
+            case "edit_command":
+            case "delete_command":
+                item = page.items().get(slot);
+                if (item == null || item.actions().isEmpty()) {
+                    if (player != null) {
+                        player.sendMessage("§cNo commands to " + (state.equals("edit_command") ? "edit" : "delete") + "!");
+                    }
+                    plugin.getLogger().warning("No commands at slot " + slot + " in GUI " + currentGui.name());
+                    return null;
+                }
+                try {
+                    int commandIndex = Integer.parseInt(tempData.get(0));
+                    actions = new ArrayList<>(item.actions());
+                    if (state.equals("edit_command")) {
+                        GUIAction oldAction = actions.get(commandIndex);
+                        String newCommand = sanitizedInput != null && sanitizedInput.startsWith("/") ? sanitizedInput.substring(1) : sanitizedInput;
+                        actions.set(commandIndex, new GUIAction(ActionType.COMMAND, newCommand, oldAction.asConsole()));
+                        if (player != null) {
+                            player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+                            player.sendMessage("§aCommand updated!");
+                        }
+                        plugin.getLogger().info("Updated command: " + newCommand + " at slot: " + slot);
+                    } else {
+                        actions.remove(commandIndex);
+                        if (player != null) {
+                            player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
+                            player.sendMessage("§aCommand deleted!");
+                        }
+                        plugin.getLogger().info("Deleted command at slot: " + slot);
+                    }
+                    page.items().put(slot, new GUIItem(item.material(), item.name(), item.lore(), item.takeable(), actions));
+                    currentGui.pages().put(pageId, page);
+                    guiManager.getGUIs().put(currentGui.name(), currentGui);
+                    return currentGui.name();
+                } catch (NumberFormatException | IndexOutOfBoundsException e) {
+                    if (player != null) {
+                        player.sendMessage("§cInvalid command index!");
+                    }
+                    plugin.getLogger().warning("Invalid command index: " + e.getMessage());
+                    return null;
+                }
             case "search_item":
-                return input;
             case "search_gui":
-                return input;
+                return sanitizedInput;
             default:
+                plugin.getLogger().warning("Unknown state: " + state);
                 return null;
         }
     }

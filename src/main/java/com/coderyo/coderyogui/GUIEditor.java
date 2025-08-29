@@ -15,210 +15,297 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.coderyo.coderyogui.Constants.*;
+
 public class GUIEditor {
     public static void openEditor(Player player, CustomGUI gui, int pageId) {
+        // 確保頁面存在
         if (!gui.pages().containsKey(pageId)) {
             gui.pages().put(pageId, new GUIPage());
             player.getServer().getPluginManager().getPlugin("CoderyoGUI").getLogger().warning(
-                "頁面 " + pageId + " 不存在於 GUI " + gui.name() + "，已自動創建新頁面"
+                String.format("頁面 %d 不存在於 GUI %s，已自動創建新頁面", pageId, gui.name())
             );
         }
 
-        Inventory editor = Bukkit.createInventory(new EditorHolder(gui, pageId), 54, "編輯: " + gui.name());
-        for (int i = 0; i < 54; i++) {
-            editor.setItem(i, createItem(Material.GRAY_STAINED_GLASS_PANE, " "));
-        }
-        editor.setItem(0, createItem(Material.BARRIER, "§c返回主菜單", List.of("§7點擊返回")));
-        editor.setItem(1, createItem(Material.WRITABLE_BOOK, "§a設置名稱", List.of("§7點擊輸入新名稱")));
-        editor.setItem(2, createItem(Material.PAPER, "§a設置行數: " + gui.rows(), List.of("§7點擊選擇行數")));
-        editor.setItem(3, createItem(Material.GREEN_WOOL, "§a添加頁面", List.of("§7點擊添加新頁面")));
-        editor.setItem(4, createItem(Material.RED_WOOL, "§a刪除當前頁面", List.of("§7點擊刪除當前頁面")));
-        if (pageId > 1) {
-            editor.setItem(5, createItem(Material.ARROW, "§a上一頁 (" + pageId + "/" + gui.pages().size() + ")", List.of("§7點擊切換")));
-        } else {
-            editor.setItem(5, createItem(Material.GRAY_STAINED_GLASS_PANE, "§7上一頁 (無)", List.of()));
-        }
-        if (pageId < gui.pages().size()) {
-            editor.setItem(6, createItem(Material.ARROW, "§a下一頁 (" + pageId + "/" + gui.pages().size() + ")", List.of("§7點擊切換")));
-        } else {
-            editor.setItem(6, createItem(Material.GRAY_STAINED_GLASS_PANE, "§7下一頁 (無)", List.of()));
-        }
-        GUIPage page = gui.pages().get(pageId);
-        editor.setItem(7, createItem(Material.CHEST, "§a設置頁面可交互: " + page.allowInteract(), List.of("§7點擊切換交互狀態")));
-        editor.setItem(8, createItem(Material.SPYGLASS, "§a預覽 GUI", List.of("§7查看最終效果")));
+        // 創建編輯器介面
+        String editorTitle = "編輯: " + gui.name();
+        Inventory editor = Bukkit.createInventory(new EditorHolder(gui, pageId), INVENTORY_SIZE_54, editorTitle);
 
-        // 槽位9及以上：顯示GUIPage.items（0-based索引）
-        int maxSlots = Math.min(gui.rows() * 9, 54);
-        for (int i = 9; i < maxSlots; i++) {
-            editor.setItem(i, page.items().getOrDefault(i, new GUIItem("AIR", null, null, false, List.of())).toItemStack());
+        // 設置背景
+        for (int slotIndex = 0; slotIndex < INVENTORY_SIZE_54; slotIndex++) {
+            editor.setItem(slotIndex, createItem(Material.GRAY_STAINED_GLASS_PANE, EMPTY_STRING));
         }
+
+        // 設置功能按鈕
+        editor.setItem(EDITOR_BACK_BUTTON, createItem(Material.BARRIER, DISPLAY_RETURN_MAIN_MENU, List.of(LORE_CLICK_RETURN)));
+        editor.setItem(EDITOR_SET_NAME_BUTTON, createItem(Material.WRITABLE_BOOK, DISPLAY_SET_NAME, List.of(LORE_CLICK_SET_NAME)));
+        editor.setItem(EDITOR_SET_ROWS_BUTTON, createItem(Material.PAPER, "§a設置行數: " + gui.rows(), List.of(LORE_CLICK_SELECT_ROWS)));
+        editor.setItem(EDITOR_ADD_PAGE_BUTTON, createItem(Material.GREEN_WOOL, "§a添加頁面", List.of(LORE_CLICK_ADD_PAGE)));
+        editor.setItem(EDITOR_DELETE_PAGE_BUTTON, createItem(Material.RED_WOOL, "§a刪除當前頁面", List.of(LORE_CLICK_DELETE_PAGE)));
+
+        // 設置分頁按鈕
+        int totalPages = gui.pages().size();
+        if (pageId > MIN_GUI_ROWS) {
+            editor.setItem(EDITOR_PREVIOUS_PAGE_BUTTON, createItem(Material.ARROW,
+                String.format("§a上一頁 (%d/%d)", pageId, totalPages), List.of(LORE_CLICK_SWITCH_PAGE)));
+        } else {
+            editor.setItem(EDITOR_PREVIOUS_PAGE_BUTTON, createItem(Material.GRAY_STAINED_GLASS_PANE, DISPLAY_PREVIOUS_PAGE_DISABLED, List.of()));
+        }
+
+        if (pageId < totalPages) {
+            editor.setItem(EDITOR_NEXT_PAGE_BUTTON, createItem(Material.ARROW,
+                String.format("§a下一頁 (%d/%d)", pageId, totalPages), List.of(LORE_CLICK_SWITCH_PAGE)));
+        } else {
+            editor.setItem(EDITOR_NEXT_PAGE_BUTTON, createItem(Material.GRAY_STAINED_GLASS_PANE, DISPLAY_NEXT_PAGE_DISABLED, List.of()));
+        }
+
+        // 設置其他功能按鈕
+        GUIPage currentPage = gui.pages().get(pageId);
+        editor.setItem(EDITOR_TOGGLE_INTERACT_BUTTON, createItem(Material.CHEST,
+            "§a設置頁面可交互: " + currentPage.allowInteract(), List.of(LORE_CLICK_TOGGLE_INTERACT)));
+        editor.setItem(EDITOR_PREVIEW_BUTTON, createItem(Material.SPYGLASS, "§a預覽 GUI", List.of(LORE_CLICK_PREVIEW)));
+
+        // 顯示GUI項目
+        int maxSlots = Math.min(gui.rows() * 9, INVENTORY_SIZE_54);
+        for (int slotIndex = CONTENT_AREA_START; slotIndex < maxSlots; slotIndex++) {
+            GUIItem guiItem = currentPage.items().getOrDefault(slotIndex,
+                new GUIItem(DEFAULT_MATERIAL, null, null, false, List.of()));
+            editor.setItem(slotIndex, guiItem.toItemStack());
+        }
+
         player.openInventory(editor);
     }
 
     public static void openContextMenu(Player player, CustomGUI gui, int slot, int pageId) {
+        // 確保頁面存在
         if (!gui.pages().containsKey(pageId)) {
             gui.pages().put(pageId, new GUIPage());
             player.getServer().getPluginManager().getPlugin("CoderyoGUI").getLogger().warning(
-                "頁面 " + pageId + " 不存在於 GUI " + gui.name() + "，已自動創建新頁面"
+                String.format("頁面 %d 不存在於 GUI %s，已自動創建新頁面", pageId, gui.name())
             );
         }
 
-        Inventory menu = Bukkit.createInventory(new EditorHolder(gui, pageId, slot), 9, "物品設置");
-        menu.setItem(0, createItem(Material.PAPER, "§a選擇物品", List.of("§7設置槽位物品")));
-        menu.setItem(1, createItem(Material.COMMAND_BLOCK, "§a設置玩家命令", List.of("§7添加執行命令")));
-        menu.setItem(2, createItem(Material.COMMAND_BLOCK, "§a設置控制台命令", List.of("§7添加控制台命令")));
-        menu.setItem(3, createItem(Material.NAME_TAG, "§a設置名稱", List.of("§7自訂物品名稱")));
-        menu.setItem(4, createItem(Material.BARRIER, "§c刪除物品", List.of("§7移除此槽位物品")));
-        menu.setItem(5, createItem(Material.WRITABLE_BOOK, "§a管理命令", List.of("§7編輯或刪除綁定命令")));
-        menu.setItem(8, createItem(Material.BARRIER, "§c返回", List.of("§7返回主編輯器")));
-        player.openInventory(menu);
+        // 創建上下文菜單
+        Inventory contextMenu = Bukkit.createInventory(new EditorHolder(gui, pageId, slot), INVENTORY_SIZE_9, TITLE_ITEM_SETTINGS);
+
+        // 設置菜單項目
+        contextMenu.setItem(CONTEXT_SELECT_ITEM_BUTTON, createItem(Material.PAPER, DISPLAY_SELECT_ITEM, List.of(LORE_CLICK_SET_ITEM)));
+        contextMenu.setItem(CONTEXT_SET_PLAYER_COMMAND_BUTTON, createItem(Material.COMMAND_BLOCK, DISPLAY_SET_PLAYER_COMMAND, List.of(LORE_CLICK_ADD_COMMAND)));
+        contextMenu.setItem(CONTEXT_SET_CONSOLE_COMMAND_BUTTON, createItem(Material.COMMAND_BLOCK, DISPLAY_SET_CONSOLE_COMMAND, List.of(LORE_CLICK_CONSOLE_COMMAND)));
+        contextMenu.setItem(CONTEXT_SET_NAME_BUTTON, createItem(Material.NAME_TAG, DISPLAY_SET_ITEM_NAME, List.of(LORE_CLICK_CUSTOM_NAME)));
+        contextMenu.setItem(CONTEXT_DELETE_ITEM_BUTTON, createItem(Material.BARRIER, DISPLAY_DELETE_ITEM, List.of(LORE_CLICK_REMOVE_ITEM)));
+        contextMenu.setItem(CONTEXT_MANAGE_COMMANDS_BUTTON, createItem(Material.WRITABLE_BOOK, DISPLAY_MANAGE_COMMANDS, List.of(LORE_CLICK_EDIT_COMMANDS)));
+        contextMenu.setItem(CONTEXT_BACK_BUTTON, createItem(Material.BARRIER, DISPLAY_BACK, List.of(LORE_CLICK_RETURN)));
+
+        player.openInventory(contextMenu);
     }
 
     public static void openItemSelect(Player player, CustomGUI gui, int slot, int pageId, String search, int searchPage) {
+        // 確保頁面存在
         if (!gui.pages().containsKey(pageId)) {
             gui.pages().put(pageId, new GUIPage());
             player.getServer().getPluginManager().getPlugin("CoderyoGUI").getLogger().warning(
-                "頁面 " + pageId + " 不存在於 GUI " + gui.name() + "，已自動創建新頁面"
+                String.format("頁面 %d 不存在於 GUI %s，已自動創建新頁面", pageId, gui.name())
             );
         }
 
-        Inventory select = Bukkit.createInventory(new EditorHolder(gui, pageId, slot, searchPage, search), 54, search == null ? "選擇物品" : "搜尋物品: " + search);
-        for (int i = 0; i < 54; i++) {
-            select.setItem(i, createItem(Material.GRAY_STAINED_GLASS_PANE, " "));
+        // 創建物品選擇介面
+        String interfaceTitle = search == null ? TITLE_SELECT_ITEM : TITLE_SEARCH_ITEM_PREFIX + search;
+        Inventory itemSelectInventory = Bukkit.createInventory(
+            new EditorHolder(gui, pageId, slot, searchPage, search),
+            INVENTORY_SIZE_54,
+            interfaceTitle
+        );
+
+        // 設置背景
+        for (int slotIndex = 0; slotIndex < INVENTORY_SIZE_54; slotIndex++) {
+            itemSelectInventory.setItem(slotIndex, createItem(Material.GRAY_STAINED_GLASS_PANE, EMPTY_STRING));
         }
-        select.setItem(0, createItem(Material.BARRIER, "§c返回", List.of("§7返回編輯器")));
-        select.setItem(1, createItem(Material.COMPASS, "§a搜尋物品", List.of("§7輸入關鍵詞（如 diamond）")));
-        List<Material> materials = Arrays.stream(Material.values())
+
+        // 設置功能按鈕
+        itemSelectInventory.setItem(ITEM_SELECT_BACK_BUTTON, createItem(Material.BARRIER, DISPLAY_BACK, List.of(LORE_CLICK_RETURN)));
+        itemSelectInventory.setItem(ITEM_SELECT_SEARCH_BUTTON, createItem(Material.COMPASS, DISPLAY_SEARCH_ITEM, List.of(LORE_CLICK_SEARCH)));
+
+        // 過濾並獲取材質列表
+        List<Material> filteredMaterials = Arrays.stream(Material.values())
                 .filter(Material::isItem)
-                .filter(m -> m != Material.AIR)
-                .filter(m -> {
+                .filter(material -> material != Material.AIR)
+                .filter(material -> {
                     try {
-                        ItemStack item = new ItemStack(m);
-                        return item.getItemMeta() != null;
-                    } catch (Exception e) {
+                        ItemStack testItem = new ItemStack(material);
+                        return testItem.getItemMeta() != null;
+                    } catch (Exception exception) {
                         return false;
                     }
                 })
-                .filter(m -> search == null || m.name().toLowerCase().contains(search.toLowerCase()))
+                .filter(material -> search == null || material.name().toLowerCase().contains(search.toLowerCase()))
                 .collect(Collectors.toList());
-        int start = (searchPage - 1) * 45;
-        for (int i = 0; i < 45 && start + i < materials.size(); i++) {
-            Material material = materials.get(start + i);
-            select.setItem(9 + i, createItem(material, "§a" + material.name(), List.of("§7點擊選擇")));
+
+        // 計算分頁
+        int startIndex = (searchPage - 1) * ITEMS_PER_PAGE;
+
+        // 顯示材質項目
+        for (int itemIndex = 0; itemIndex < ITEMS_PER_PAGE && startIndex + itemIndex < filteredMaterials.size(); itemIndex++) {
+            Material material = filteredMaterials.get(startIndex + itemIndex);
+            int slotPosition = CONTENT_AREA_START + itemIndex;
+            itemSelectInventory.setItem(slotPosition, createItem(material, "§a" + material.name(), List.of(LORE_CLICK_SELECT)));
         }
+
+        // 設置分頁按鈕
         if (searchPage > 1) {
-            select.setItem(52, createItem(Material.ARROW, "§a上一頁", List.of("§7點擊切換")));
+            itemSelectInventory.setItem(PREVIOUS_PAGE_BUTTON, createItem(Material.ARROW, DISPLAY_PREVIOUS_PAGE, List.of(LORE_CLICK_SWITCH)));
         } else {
-            select.setItem(52, createItem(Material.GRAY_STAINED_GLASS_PANE, "§7上一頁 (無)", List.of()));
+            itemSelectInventory.setItem(PREVIOUS_PAGE_BUTTON, createItem(Material.GRAY_STAINED_GLASS_PANE, DISPLAY_PREVIOUS_PAGE_DISABLED, List.of()));
         }
-        if (start + 45 < materials.size()) {
-            select.setItem(53, createItem(Material.ARROW, "§a下一頁", List.of("§7點擊切換")));
+
+        if (startIndex + ITEMS_PER_PAGE < filteredMaterials.size()) {
+            itemSelectInventory.setItem(NEXT_PAGE_BUTTON, createItem(Material.ARROW, DISPLAY_NEXT_PAGE, List.of(LORE_CLICK_SWITCH)));
         } else {
-            select.setItem(53, createItem(Material.GRAY_STAINED_GLASS_PANE, "§7下一頁 (無)", List.of()));
+            itemSelectInventory.setItem(NEXT_PAGE_BUTTON, createItem(Material.GRAY_STAINED_GLASS_PANE, DISPLAY_NEXT_PAGE_DISABLED, List.of()));
         }
-        if (materials.isEmpty()) {
-            select.setItem(9, createItem(Material.BOOK, "§c無匹配物品", List.of("§7請嘗試其他關鍵詞")));
+
+        // 無匹配物品時的提示
+        if (filteredMaterials.isEmpty()) {
+            itemSelectInventory.setItem(CONTENT_AREA_START, createItem(Material.BOOK, DISPLAY_NO_MATCHING_ITEMS, List.of(LORE_TRY_OTHER_KEYWORD)));
         }
-        player.openInventory(select);
+
+        player.openInventory(itemSelectInventory);
     }
 
     public static void openRowSelect(Player player, CustomGUI gui, int pageId) {
+        // 確保頁面存在
         if (!gui.pages().containsKey(pageId)) {
             gui.pages().put(pageId, new GUIPage());
             player.getServer().getPluginManager().getPlugin("CoderyoGUI").getLogger().warning(
-                "頁面 " + pageId + " 不存在於 GUI " + gui.name() + "，已自動創建新頁面"
+                String.format("頁面 %d 不存在於 GUI %s，已自動創建新頁面", pageId, gui.name())
             );
         }
 
-        Inventory select = Bukkit.createInventory(new EditorHolder(gui, pageId), 36, "選擇行數");
-        for (int i = 0; i < 36; i++) {
-            select.setItem(i, createItem(Material.GRAY_STAINED_GLASS_PANE, " "));
+        // 創建行數選擇介面
+        Inventory rowSelectInventory = Bukkit.createInventory(new EditorHolder(gui, pageId), INVENTORY_SIZE_36, TITLE_SELECT_ROWS);
+
+        // 設置背景
+        for (int slotIndex = 0; slotIndex < INVENTORY_SIZE_36; slotIndex++) {
+            rowSelectInventory.setItem(slotIndex, createItem(Material.GRAY_STAINED_GLASS_PANE, EMPTY_STRING));
         }
-        for (int i = 1; i <= 6; i++) {
-            ItemStack item = createItem(Material.PAPER, "§a" + i + " 行" + (gui.rows() == i ? " §7(當前)" : ""));
-            if (gui.rows() == i) {
-                ItemMeta meta = item.getItemMeta();
-                if (meta != null) {
-                    meta.addEnchant(Enchantment.UNBREAKING, 1, true);
-                    item.setItemMeta(meta);
+
+        // 設置行數選項
+        for (int rowNumber = MIN_GUI_ROWS; rowNumber <= MAX_GUI_ROWS; rowNumber++) {
+            String displayText = "§a" + rowNumber + " 行" + (gui.rows() == rowNumber ? " §7(當前)" : "");
+            ItemStack rowItem = createItem(Material.PAPER, displayText);
+
+            // 當前行數添加附魔效果
+            if (gui.rows() == rowNumber) {
+                ItemMeta itemMeta = rowItem.getItemMeta();
+                if (itemMeta != null) {
+                    itemMeta.addEnchant(Enchantment.UNBREAKING, DEFAULT_ENCHANTMENT_LEVEL, true);
+                    rowItem.setItemMeta(itemMeta);
                 }
             }
-            select.setItem(i - 1, item);
+
+            rowSelectInventory.setItem(rowNumber - 1, rowItem);
         }
-        select.setItem(0, createItem(Material.BARRIER, "§c返回"));
-        player.openInventory(select);
+
+        // 返回按鈕（覆蓋第一個行數按鈕）
+        rowSelectInventory.setItem(0, createItem(Material.BARRIER, DISPLAY_BACK));
+
+        player.openInventory(rowSelectInventory);
     }
 
     public static void openCommandManager(Player player, CustomGUI gui, int slot, int pageId, int commandPage) {
+        // 確保頁面存在
         if (!gui.pages().containsKey(pageId)) {
             gui.pages().put(pageId, new GUIPage());
             player.getServer().getPluginManager().getPlugin("CoderyoGUI").getLogger().warning(
-                "頁面 " + pageId + " 不存在於 GUI " + gui.name() + "，已自動創建新頁面"
+                String.format("頁面 %d 不存在於 GUI %s，已自動創建新頁面", pageId, gui.name())
             );
         }
 
-        GUIPage page = gui.pages().get(pageId);
-        GUIItem item = page.items().get(slot);
-        List<GUIAction> actions = item != null ? item.actions() : new ArrayList<>();
+        // 獲取頁面和項目
+        GUIPage currentPage = gui.pages().get(pageId);
+        GUIItem guiItem = currentPage.items().get(slot);
+        List<GUIAction> actions = guiItem != null ? guiItem.actions() : new ArrayList<>();
 
-        Inventory manager = Bukkit.createInventory(new EditorHolder(gui, pageId, slot, commandPage, null), 54, "管理命令: 槽位 " + slot);
-        for (int i = 0; i < 54; i++) {
-            manager.setItem(i, createItem(Material.GRAY_STAINED_GLASS_PANE, " "));
+        // 創建命令管理介面
+        String managerTitle = TITLE_MANAGE_COMMANDS_PREFIX + slot;
+        Inventory commandManager = Bukkit.createInventory(
+            new EditorHolder(gui, pageId, slot, commandPage, null),
+            INVENTORY_SIZE_54,
+            managerTitle
+        );
+
+        // 設置背景
+        for (int slotIndex = 0; slotIndex < INVENTORY_SIZE_54; slotIndex++) {
+            commandManager.setItem(slotIndex, createItem(Material.GRAY_STAINED_GLASS_PANE, EMPTY_STRING));
         }
-        manager.setItem(0, createItem(Material.BARRIER, "§c返回", List.of("§7返回物品設置")));
-        manager.setItem(1, createItem(Material.PAPER, "§a添加新命令", List.of("§7點擊添加命令")));
 
-        int start = (commandPage - 1) * 45;
-        for (int i = 0; i < 45 && start + i < actions.size(); i++) {
-            GUIAction action = actions.get(start + i);
-            Material mat = action.asConsole() ? Material.COMMAND_BLOCK : Material.REPEATING_COMMAND_BLOCK;
-            manager.setItem(9 + i, createItem(mat, "§a命令: " + action.value(), List.of(
-                "§7類型: " + (action.asConsole() ? "控制台" : "玩家"),
-                "§7左鍵編輯，右鍵刪除"
+        // 設置功能按鈕
+        commandManager.setItem(COMMAND_MANAGER_BACK_BUTTON, createItem(Material.BARRIER, DISPLAY_BACK, List.of(LORE_CLICK_RETURN)));
+        commandManager.setItem(COMMAND_MANAGER_ADD_BUTTON, createItem(Material.PAPER, DISPLAY_ADD_NEW_COMMAND, List.of(LORE_CLICK_ADD_NEW_COMMAND)));
+
+        // 計算分頁並顯示命令
+        int startIndex = (commandPage - 1) * ITEMS_PER_PAGE;
+        for (int itemIndex = 0; itemIndex < ITEMS_PER_PAGE && startIndex + itemIndex < actions.size(); itemIndex++) {
+            GUIAction action = actions.get(startIndex + itemIndex);
+            Material material = action.asConsole() ? Material.COMMAND_BLOCK : Material.REPEATING_COMMAND_BLOCK;
+            String commandDisplay = "§a命令: " + action.value();
+            String commandType = "§7類型: " + (action.asConsole() ? "控制台" : "玩家");
+
+            int slotPosition = CONTENT_AREA_START + itemIndex;
+            commandManager.setItem(slotPosition, createItem(material, commandDisplay, List.of(
+                commandType,
+                LORE_CLICK_EDIT_OR_DELETE
             )));
         }
 
+        // 設置分頁按鈕
         if (commandPage > 1) {
-            manager.setItem(52, createItem(Material.ARROW, "§a上一頁", List.of("§7點擊切換")));
+            commandManager.setItem(PREVIOUS_PAGE_BUTTON, createItem(Material.ARROW, DISPLAY_PREVIOUS_PAGE, List.of(LORE_CLICK_SWITCH)));
         } else {
-            manager.setItem(52, createItem(Material.GRAY_STAINED_GLASS_PANE, "§7上一頁 (無)", List.of()));
+            commandManager.setItem(PREVIOUS_PAGE_BUTTON, createItem(Material.GRAY_STAINED_GLASS_PANE, DISPLAY_PREVIOUS_PAGE_DISABLED, List.of()));
         }
-        if (start + 45 < actions.size()) {
-            manager.setItem(53, createItem(Material.ARROW, "§a下一頁", List.of("§7點擊切換")));
+
+        if (startIndex + ITEMS_PER_PAGE < actions.size()) {
+            commandManager.setItem(NEXT_PAGE_BUTTON, createItem(Material.ARROW, DISPLAY_NEXT_PAGE, List.of(LORE_CLICK_SWITCH)));
         } else {
-            manager.setItem(53, createItem(Material.GRAY_STAINED_GLASS_PANE, "§7下一頁 (無)", List.of()));
+            commandManager.setItem(NEXT_PAGE_BUTTON, createItem(Material.GRAY_STAINED_GLASS_PANE, DISPLAY_NEXT_PAGE_DISABLED, List.of()));
         }
+
+        // 無命令時的提示
         if (actions.isEmpty()) {
-            manager.setItem(9, createItem(Material.BOOK, "§c無綁定命令", List.of("§7請添加新命令")));
+            commandManager.setItem(CONTENT_AREA_START, createItem(Material.BOOK, DISPLAY_NO_COMMANDS, List.of(LORE_NO_BOUND_COMMANDS)));
         }
 
-        player.openInventory(manager);
+        player.openInventory(commandManager);
     }
 
-    private static ItemStack createItem(Material material, String name) {
-        return createItem(material, name, null);
+    private static ItemStack createItem(Material material, String displayName) {
+        return createItem(material, displayName, null);
     }
 
-    private static ItemStack createItem(Material material, String name, List<String> lore) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName(ChatColor.RESET + name);
+    private static ItemStack createItem(Material material, String displayName, List<String> lore) {
+        ItemStack itemStack = new ItemStack(material);
+        ItemMeta itemMeta = itemStack.getItemMeta();
+
+        if (itemMeta != null) {
+            itemMeta.setDisplayName(ChatColor.RESET + displayName);
             if (lore != null) {
-                meta.setLore(lore.stream().map(s -> ChatColor.RESET + s).toList());
+                itemMeta.setLore(lore.stream().map(loreLine -> ChatColor.RESET + loreLine).toList());
             }
-            item.setItemMeta(meta);
+            itemStack.setItemMeta(itemMeta);
         } else {
-            item = new ItemStack(Material.STONE);
-            meta = item.getItemMeta();
-            if (meta != null) {
-                meta.setDisplayName(ChatColor.RESET + name);
+            // 備用物品當原始材質無效時
+            itemStack = new ItemStack(Material.STONE);
+            itemMeta = itemStack.getItemMeta();
+            if (itemMeta != null) {
+                itemMeta.setDisplayName(ChatColor.RESET + displayName);
                 if (lore != null) {
-                    meta.setLore(lore.stream().map(s -> ChatColor.RESET + s).toList());
+                    itemMeta.setLore(lore.stream().map(loreLine -> ChatColor.RESET + loreLine).toList());
                 }
-                item.setItemMeta(meta);
+                itemStack.setItemMeta(itemMeta);
             }
         }
-        return item;
+
+        return itemStack;
     }
 }

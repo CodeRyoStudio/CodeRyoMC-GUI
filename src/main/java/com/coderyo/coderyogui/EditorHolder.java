@@ -3,6 +3,8 @@ package com.coderyo.coderyogui;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 
+import static com.coderyo.coderyogui.Constants.*;
+
 public class EditorHolder implements InventoryHolder {
     private final CustomGUI gui;
     private final int pageId;
@@ -11,11 +13,11 @@ public class EditorHolder implements InventoryHolder {
     private final String search;
 
     public EditorHolder(CustomGUI gui, int pageId) {
-        this(gui, pageId, -1, 1, null);
+        this(gui, pageId, DEFAULT_SLOT_VALUE, DEFAULT_GUI_PAGE, null);
     }
 
     public EditorHolder(CustomGUI gui, int pageId, int slot) {
-        this(gui, pageId, slot, 1, null);
+        this(gui, pageId, slot, DEFAULT_GUI_PAGE, null);
     }
 
     public EditorHolder(CustomGUI gui, int pageId, int slot, int searchPage) {

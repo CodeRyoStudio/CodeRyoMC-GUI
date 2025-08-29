@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import static com.coderyo.coderyogui.Constants.*;
+
 public class DataStorage {
     private final CoderyoGUI plugin;
     private final File file;
@@ -42,7 +44,7 @@ public class DataStorage {
             for (String guiName : guisSection.getKeys(false)) {
                 try {
                     ConfigurationSection guiSection = guisSection.getConfigurationSection(guiName);
-                    int rows = guiSection.getInt("rows", 3);
+                    int rows = guiSection.getInt("rows", MIN_GUI_ROWS);
                     Map<Integer, GUIPage> pages = new HashMap<>();
                     ConfigurationSection pagesSection = guiSection.getConfigurationSection("pages");
                     if (pagesSection != null) {
@@ -80,8 +82,8 @@ public class DataStorage {
                         }
                     }
                     if (pages.isEmpty()) {
-                        pages.put(1, new GUIPage());
-                        plugin.getLogger().warning("GUI " + guiName + " has no pages, added pageId=1");
+                        pages.put(DEFAULT_GUI_PAGE, new GUIPage());
+                        plugin.getLogger().warning(String.format(LOG_GUI_MISSING_PAGE, guiName, DEFAULT_GUI_PAGE));
                     }
                     plugin.getGuiManager().getGUIs().put(guiName, new CustomGUI(guiName, rows, pages));
                 } catch (Exception e) {

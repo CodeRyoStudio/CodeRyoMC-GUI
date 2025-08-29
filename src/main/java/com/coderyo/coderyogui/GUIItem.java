@@ -7,13 +7,15 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.coderyo.coderyogui.Constants.*;
+
 public record GUIItem(String material, String name, List<String> lore, boolean takeable, List<GUIAction> actions) {
     public ItemStack toItemStack() {
-        Material mat = Material.matchMaterial(material);
-        if (mat == null) {
-            mat = Material.AIR;
+        Material materialType = Material.matchMaterial(material);
+        if (materialType == null) {
+            materialType = DEFAULT_MATERIAL_TYPE;
         }
-        ItemStack item = new ItemStack(mat);
+        ItemStack item = new ItemStack(materialType);
         if (name != null || lore != null) {
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {

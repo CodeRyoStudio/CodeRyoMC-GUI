@@ -6,6 +6,8 @@ import com.coderyo.coderyogui.GUIItem;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.coderyo.coderyogui.Constants.*;
+
 /**
  * A builder class for creating {@link GUIItem} instances with customizable properties
  * such as material, name, lore, takeability, and actions.
@@ -93,8 +95,8 @@ public class GUIItemBuilder {
      * @return This builder instance for method chaining.
      */
     public GUIItemBuilder addCommandAction(String command, boolean asConsole) {
-        if (command == null || command.isEmpty() || command.length() > 100) {
-            throw new IllegalArgumentException("Command must be 1-100 characters");
+        if (command == null || command.isEmpty() || command.length() > MAX_COMMAND_LENGTH) {
+            throw new IllegalArgumentException("Command must be 1-" + MAX_COMMAND_LENGTH + " characters");
         }
         this.actions.add(new GUIAction(ActionType.COMMAND, command, asConsole));
         return this;
@@ -107,8 +109,8 @@ public class GUIItemBuilder {
      * @return This builder instance for method chaining.
      */
     public GUIItemBuilder addMessageAction(String message) {
-        if (message == null || message.isEmpty() || message.length() > 100) {
-            throw new IllegalArgumentException("Message must be 1-100 characters");
+        if (message == null || message.isEmpty() || message.length() > MAX_MESSAGE_LENGTH) {
+            throw new IllegalArgumentException("Message must be 1-" + MAX_MESSAGE_LENGTH + " characters");
         }
         this.actions.add(new GUIAction(ActionType.MESSAGE, message));
         return this;
@@ -123,8 +125,8 @@ public class GUIItemBuilder {
      * @return This builder instance for method chaining.
      */
     public GUIItemBuilder addSoundAction(String sound, float volume, float pitch) {
-        if (sound == null || sound.isEmpty() || sound.length() > 100) {
-            throw new IllegalArgumentException("Sound name must be 1-100 characters");
+        if (sound == null || sound.isEmpty() || sound.length() > MAX_SOUND_NAME_LENGTH) {
+            throw new IllegalArgumentException("Sound name must be 1-" + MAX_SOUND_NAME_LENGTH + " characters");
         }
         this.actions.add(new GUIAction(ActionType.SOUND, sound, false, volume, pitch));
         return this;

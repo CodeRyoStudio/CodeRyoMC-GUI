@@ -21,6 +21,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.coderyo.coderyogui.Constants.*;
+
 public class EventListener implements Listener {
     private final CoderyoGUI plugin;
     private final InputHandler inputHandler;
@@ -44,175 +46,176 @@ public class EventListener implements Listener {
 
         if (holder instanceof MainMenuHolder menuHolder) {
             event.setCancelled(true);
-            plugin.getLogger().info("玩家 " + player.getName() + " 點擊主菜單，槽位 " + slot);
-            if (slot == 0) {
-                if (!player.hasPermission("coderyogui.create")) {
-                    player.sendMessage("§c無權限創建 GUI！");
+            plugin.getLogger().info(String.format(LOG_CLICKED_MAIN_MENU, player.getName(), slot));
+
+            if (slot == MAIN_MENU_CREATE_BUTTON) {
+                if (!player.hasPermission(PERMISSION_CREATE)) {
+                    player.sendMessage(MSG_NO_PERMISSION_CREATE);
                     return;
                 }
-                plugin.setEditSession(player.getUniqueId(), new EditSession(null, "create_gui", -1, 1));
+                plugin.setEditSession(player.getUniqueId(), new EditSession(null, STATE_CREATE_GUI, -1, DEFAULT_GUI_PAGE));
                 player.closeInventory();
-                inputHandler.openSignInput(player, "輸入新 GUI 名稱", input -> handleInput(player, input));
-            } else if (slot == 1) {
-                if (!player.hasPermission("coderyogui.use")) {
-                    player.sendMessage("§c無權限打開 GUI！");
+                inputHandler.openSignInput(player, PROMPT_ENTER_GUI_NAME, input -> handleInput(player, input));
+            } else if (slot == MAIN_MENU_OPEN_BUTTON) {
+                if (!player.hasPermission(PERMISSION_USE)) {
+                    player.sendMessage(MSG_NO_PERMISSION_OPEN);
                     return;
                 }
-                new GUIListGUI(plugin, 1, false, null).open(player);
-            } else if (slot == 2) {
-                if (!player.hasPermission("coderyogui.edit.*")) {
-                    player.sendMessage("§c無權限編輯 GUI！");
+                new GUIListGUI(plugin, DEFAULT_GUI_PAGE, false, null).open(player);
+            } else if (slot == MAIN_MENU_EDIT_BUTTON) {
+                if (!player.hasPermission(PERMISSION_EDIT_ALL)) {
+                    player.sendMessage(MSG_NO_PERMISSION_EDIT);
                     return;
                 }
-                new GUIListGUI(plugin, 1, true, null).open(player);
-            } else if (slot == 3) {
-                if (!player.hasPermission("coderyogui.del")) {
-                    player.sendMessage("§c無權限刪除 GUI！");
+                new GUIListGUI(plugin, DEFAULT_GUI_PAGE, true, null).open(player);
+            } else if (slot == MAIN_MENU_DELETE_BUTTON) {
+                if (!player.hasPermission(PERMISSION_DELETE)) {
+                    player.sendMessage(MSG_NO_PERMISSION_DELETE);
                     return;
                 }
-                new DeleteGUIListGUI(plugin, 1, null).open(player);
-            } else if (slot >= 9 && slot < 54) {
+                new DeleteGUIListGUI(plugin, DEFAULT_GUI_PAGE, null).open(player);
+            } else if (slot >= CONTENT_AREA_START && slot < INVENTORY_SIZE_54) {
                 List<String> guiNames = new ArrayList<>(plugin.getGuiManager().getGUIs().keySet());
-                int index = (menuHolder.getPage() - 1) * 45 + (slot - 9);
+                int index = (menuHolder.getPage() - 1) * ITEMS_PER_PAGE + (slot - CONTENT_AREA_START);
                 if (index < guiNames.size()) {
                     String guiName = guiNames.get(index);
                     if (event.getClick() == ClickType.LEFT) {
-                        if (!player.hasPermission("coderyogui.use")) {
-                            player.sendMessage("§c無權限打開 GUI！");
+                        if (!player.hasPermission(PERMISSION_USE)) {
+                            player.sendMessage(MSG_NO_PERMISSION_OPEN);
                             return;
                         }
                         CustomGUI gui = plugin.getGuiManager().getGUI(guiName);
                         if (gui != null) {
-                            player.openInventory(gui.getPage(1));
-                            player.sendMessage("§a已打開 GUI: " + guiName);
+                            player.openInventory(gui.getPage(DEFAULT_GUI_PAGE));
+                            player.sendMessage(MSG_GUI_OPENED + guiName);
                         } else {
-                            player.sendMessage("§cGUI 不存在！");
+                            player.sendMessage(MSG_GUI_NOT_FOUND);
                         }
                     } else if (event.getClick() == ClickType.RIGHT) {
-                        if (!player.hasPermission("coderyogui.edit." + guiName)) {
-                            player.sendMessage("§c無權限編輯 GUI！");
+                        if (!player.hasPermission(PERMISSION_EDIT_ALL)) {
+                            player.sendMessage(MSG_NO_PERMISSION_EDIT);
                             return;
                         }
                         CustomGUI gui = plugin.getGuiManager().getGUI(guiName);
                         if (gui != null) {
-                            if (!gui.pages().containsKey(1)) {
-                                gui.pages().put(1, new GUIPage());
-                                plugin.getLogger().warning("GUI " + guiName + " 缺少 pageId=1，已自動創建");
+                            if (!gui.pages().containsKey(DEFAULT_GUI_PAGE)) {
+                                gui.pages().put(DEFAULT_GUI_PAGE, new GUIPage());
+                                plugin.getLogger().warning(String.format(LOG_GUI_MISSING_PAGE, guiName, DEFAULT_GUI_PAGE));
                                 plugin.getDataStorage().saveGUIsAsync();
                             }
-                            GUIEditor.openEditor(player, gui, 1);
-                            player.sendMessage("§a正在編輯 GUI: " + guiName);
+                            GUIEditor.openEditor(player, gui, DEFAULT_GUI_PAGE);
+                            player.sendMessage(MSG_GUI_EDITING + guiName);
                         } else {
-                            player.sendMessage("§cGUI 不存在！");
+                            player.sendMessage(MSG_GUI_DOES_NOT_EXIST);
                         }
                     }
                 }
-            } else if (slot == 52 && menuHolder.getPage() > 1) {
+            } else if (slot == PREVIOUS_PAGE_BUTTON && menuHolder.getPage() > MIN_GUI_ROWS) {
                 new MainMenuGUI(plugin, menuHolder.getPage() - 1).open(player);
-                player.sendMessage("§a已切換到上一頁");
-            } else if (slot == 53) {
+                player.sendMessage(MSG_SWITCHED_TO_PREVIOUS_PAGE);
+            } else if (slot == NEXT_PAGE_BUTTON) {
                 new MainMenuGUI(plugin, menuHolder.getPage() + 1).open(player);
-                player.sendMessage("§a已切換到下一頁");
+                player.sendMessage(MSG_SWITCHED_TO_NEXT_PAGE);
             }
         } else if (holder instanceof GUIListHolder listHolder) {
             event.setCancelled(true);
             plugin.getLogger().info("玩家 " + player.getName() + " 點擊 GUI 選擇列表，槽位 " + slot + "，模式: " + (listHolder.isEditMode() ? "編輯" : "打開"));
-            if (slot == 0) {
-                new MainMenuGUI(plugin, 1).open(player);
-                player.sendMessage("§a已返回主菜單");
-            } else if (slot == 1) {
-                plugin.setEditSession(player.getUniqueId(), new EditSession(null, "search_gui", -1, listHolder.getPage(), new ArrayList<>(Collections.singletonList(listHolder.isEditMode() ? "edit" : "open"))));
+            if (slot == EDITOR_BACK_BUTTON) {
+                new MainMenuGUI(plugin, DEFAULT_GUI_PAGE).open(player);
+                player.sendMessage(MSG_RETURNED_TO_MAIN_MENU_ALT);
+            } else if (slot == ITEM_SELECT_SEARCH_BUTTON) {
+                plugin.setEditSession(player.getUniqueId(), new EditSession(null, STATE_SEARCH_GUI, DEFAULT_SLOT_VALUE, listHolder.getPage(), new ArrayList<>(Collections.singletonList(listHolder.isEditMode() ? TEMP_FLAG_EDIT : TEMP_FLAG_OPEN))));
                 player.closeInventory();
-                inputHandler.openSignInput(player, "輸入 GUI 名稱關鍵詞", input -> handleInput(player, input));
-            } else if (slot >= 9 && slot < 54) {
+                inputHandler.openSignInput(player, PROMPT_ENTER_GUI_NAME_KEYWORD, input -> handleInput(player, input));
+            } else if (slot >= CONTENT_AREA_START && slot < INVENTORY_SIZE_54) {
                 List<String> guiNames = new ArrayList<>(plugin.getGuiManager().getGUIs().keySet()).stream()
                         .filter(name -> listHolder.getSearch() == null || name.toLowerCase().contains(listHolder.getSearch().toLowerCase()))
                         .collect(Collectors.toList());
-                int index = (listHolder.getPage() - 1) * 45 + (slot - 9);
+                int index = (listHolder.getPage() - 1) * ITEMS_PER_PAGE + (slot - CONTENT_AREA_START);
                 if (index < guiNames.size()) {
                     String guiName = guiNames.get(index);
                     CustomGUI gui = plugin.getGuiManager().getGUI(guiName);
                     if (gui == null) {
-                        player.sendMessage("§cGUI 不存在！");
+                        player.sendMessage(MSG_GUI_DOES_NOT_EXIST);
                         return;
                     }
                     if (listHolder.isEditMode()) {
-                        if (!player.hasPermission("coderyogui.edit." + guiName)) {
-                            player.sendMessage("§c無權限編輯 GUI！");
+                        if (!player.hasPermission(PERMISSION_EDIT_ALL)) {
+                            player.sendMessage(MSG_NO_PERMISSION_EDIT);
                             return;
                         }
-                        if (!gui.pages().containsKey(1)) {
-                            gui.pages().put(1, new GUIPage());
-                            plugin.getLogger().warning("GUI " + guiName + " 缺少 pageId=1，已自動創建");
+                        if (!gui.pages().containsKey(DEFAULT_GUI_PAGE)) {
+                            gui.pages().put(DEFAULT_GUI_PAGE, new GUIPage());
+                            plugin.getLogger().warning(String.format(LOG_GUI_MISSING_PAGE, guiName, DEFAULT_GUI_PAGE));
                             plugin.getDataStorage().saveGUIsAsync();
                         }
-                        GUIEditor.openEditor(player, gui, 1);
-                        player.sendMessage("§a正在編輯 GUI: " + guiName);
+                        GUIEditor.openEditor(player, gui, DEFAULT_GUI_PAGE);
+                        player.sendMessage(MSG_GUI_EDITING + guiName);
                     } else {
-                        if (!player.hasPermission("coderyogui.use")) {
-                            player.sendMessage("§c無權限打開 GUI！");
+                        if (!player.hasPermission(PERMISSION_USE)) {
+                            player.sendMessage(MSG_NO_PERMISSION_OPEN);
                             return;
                         }
-                        player.openInventory(gui.getPage(1));
-                        player.sendMessage("§a已打開 GUI: " + guiName);
+                        player.openInventory(gui.getPage(DEFAULT_GUI_PAGE));
+                        player.sendMessage(MSG_GUI_OPENED + guiName);
                     }
                 }
-            } else if (slot == 52 && listHolder.getPage() > 1) {
+            } else if (slot == PREVIOUS_PAGE_BUTTON && listHolder.getPage() > MIN_GUI_ROWS) {
                 new GUIListGUI(plugin, listHolder.getPage() - 1, listHolder.isEditMode(), listHolder.getSearch()).open(player);
-                player.sendMessage("§a已切換到上一頁");
-            } else if (slot == 53) {
+                player.sendMessage(MSG_SWITCHED_TO_PREVIOUS_PAGE);
+            } else if (slot == NEXT_PAGE_BUTTON) {
                 new GUIListGUI(plugin, listHolder.getPage() + 1, listHolder.isEditMode(), listHolder.getSearch()).open(player);
-                player.sendMessage("§a已切換到下一頁");
+                player.sendMessage(MSG_SWITCHED_TO_NEXT_PAGE);
             }
         } else if (holder instanceof DeleteGUIListHolder deleteHolder) {
             event.setCancelled(true);
             plugin.getLogger().info("玩家 " + player.getName() + " 點擊刪除 GUI 列表，槽位 " + slot);
-            if (slot == 0) {
-                new MainMenuGUI(plugin, 1).open(player);
-                player.sendMessage("§a已返回主菜單");
-            } else if (slot == 1) {
-                plugin.setEditSession(player.getUniqueId(), new EditSession(null, "search_gui", -1, deleteHolder.getPage(), new ArrayList<>(Collections.singletonList("delete"))));
+            if (slot == EDITOR_BACK_BUTTON) {
+                new MainMenuGUI(plugin, DEFAULT_GUI_PAGE).open(player);
+                player.sendMessage(MSG_RETURNED_TO_MAIN_MENU_ALT);
+            } else if (slot == ITEM_SELECT_SEARCH_BUTTON) {
+                plugin.setEditSession(player.getUniqueId(), new EditSession(null, STATE_SEARCH_GUI, DEFAULT_SLOT_VALUE, deleteHolder.getPage(), new ArrayList<>(Collections.singletonList(TEMP_FLAG_DELETE))));
                 player.closeInventory();
-                inputHandler.openSignInput(player, "輸入 GUI 名稱關鍵詞", input -> handleInput(player, input));
-            } else if (slot >= 9 && slot < 54) {
+                inputHandler.openSignInput(player, PROMPT_ENTER_GUI_NAME_KEYWORD, input -> handleInput(player, input));
+            } else if (slot >= CONTENT_AREA_START && slot < INVENTORY_SIZE_54) {
                 List<String> guiNames = new ArrayList<>(plugin.getGuiManager().getGUIs().keySet()).stream()
                         .filter(name -> deleteHolder.getSearch() == null || name.toLowerCase().contains(deleteHolder.getSearch().toLowerCase()))
                         .collect(Collectors.toList());
-                int index = (deleteHolder.getPage() - 1) * 45 + (slot - 9);
+                int index = (deleteHolder.getPage() - 1) * ITEMS_PER_PAGE + (slot - CONTENT_AREA_START);
                 if (index < guiNames.size()) {
                     String guiName = guiNames.get(index);
-                    if (!player.hasPermission("coderyogui.del")) {
-                        player.sendMessage("§c無權限刪除 GUI！");
+                    if (!player.hasPermission(PERMISSION_DELETE)) {
+                        player.sendMessage(MSG_NO_PERMISSION_DELETE);
                         return;
                     }
                     DeleteGUIListGUI.openConfirm(player, guiName);
                 }
-            } else if (slot == 52 && deleteHolder.getPage() > 1) {
+            } else if (slot == PREVIOUS_PAGE_BUTTON && deleteHolder.getPage() > MIN_GUI_ROWS) {
                 new DeleteGUIListGUI(plugin, deleteHolder.getPage() - 1, deleteHolder.getSearch()).open(player);
-                player.sendMessage("§a已切換到上一頁");
-            } else if (slot == 53) {
+                player.sendMessage(MSG_SWITCHED_TO_PREVIOUS_PAGE);
+            } else if (slot == NEXT_PAGE_BUTTON) {
                 new DeleteGUIListGUI(plugin, deleteHolder.getPage() + 1, deleteHolder.getSearch()).open(player);
-                player.sendMessage("§a已切換到下一頁");
+                player.sendMessage(MSG_SWITCHED_TO_NEXT_PAGE);
             }
         } else if (holder instanceof DeleteConfirmHolder confirmHolder) {
             event.setCancelled(true);
             plugin.getLogger().info("玩家 " + player.getName() + " 點擊刪除確認界面，槽位 " + slot);
-            if (slot == 3) {
+            if (slot == DELETE_CONFIRM_CONFIRM_BUTTON) {
                 String guiName = confirmHolder.getGuiName();
                 plugin.getGuiManager().getGUIs().remove(guiName);
                 plugin.getDataStorage().saveGUIsAsync();
-                player.sendMessage("§a已刪除 GUI: " + guiName);
-                new MainMenuGUI(plugin, 1).open(player);
-            } else if (slot == 5) {
-                new MainMenuGUI(plugin, 1).open(player);
-                player.sendMessage("§a已取消刪除");
+                player.sendMessage(MSG_GUI_DELETED + guiName);
+                new MainMenuGUI(plugin, DEFAULT_GUI_PAGE).open(player);
+            } else if (slot == DELETE_CONFIRM_CANCEL_BUTTON) {
+                new MainMenuGUI(plugin, DEFAULT_GUI_PAGE).open(player);
+                player.sendMessage(MSG_CANCELLED_DELETION);
             }
         } else if (holder instanceof EditorHolder editorHolder) {
             CustomGUI gui = editorHolder.getGUI();
             int pageId = editorHolder.getPageId();
             if (!gui.pages().containsKey(pageId)) {
                 gui.pages().put(pageId, new GUIPage());
-                plugin.getLogger().warning("GUI " + gui.name() + " 缺少 pageId=" + pageId + "，已自動創建");
+                plugin.getLogger().warning(String.format(LOG_GUI_MISSING_PAGE, gui.name(), pageId));
                 plugin.getDataStorage().saveGUIsAsync();
             }
             GUIPage page = gui.pages().get(pageId);
@@ -220,41 +223,41 @@ public class EventListener implements Listener {
             if (title.startsWith("編輯: ")) {
                 event.setCancelled(true);
                 if (gui == null || page == null) {
-                    player.sendMessage("§c無效 GUI 或頁面！");
-                    new MainMenuGUI(plugin, 1).open(player);
+                                            player.sendMessage(MSG_INVALID_GUI_OR_PAGE);
+                    new MainMenuGUI(plugin, DEFAULT_GUI_PAGE).open(player);
                     return;
                 }
                 if (slot == 0) {
-                    new MainMenuGUI(plugin, 1).open(player);
-                    player.sendMessage("§a已返回主菜單");
+                    new MainMenuGUI(plugin, DEFAULT_GUI_PAGE).open(player);
+                    player.sendMessage(MSG_RETURNED_TO_MAIN_MENU_ALT);
                 } else if (slot == 1) {
                     plugin.setEditSession(player.getUniqueId(), new EditSession(gui, "set_name", -1, pageId));
                     player.closeInventory();
-                    inputHandler.openSignInput(player, "輸入 GUI 名稱", input -> handleInput(player, input));
+                    inputHandler.openSignInput(player, PROMPT_ENTER_GUI_NAME_ALT, input -> handleInput(player, input));
                 } else if (slot == 2) {
                     GUIEditor.openRowSelect(player, gui, pageId);
-                } else if (slot == 3) {
+                } else if (slot == EDITOR_ADD_PAGE_BUTTON) {
                     int newPageId = gui.pages().size() + 1;
                     gui.pages().put(newPageId, new GUIPage());
                     plugin.getDataStorage().saveGUIsAsync();
                     GUIEditor.openEditor(player, gui, newPageId);
-                } else if (slot == 4) {
+                } else if (slot == EDITOR_DELETE_PAGE_BUTTON) {
                     if (gui.pages().size() > 1) {
                         gui.pages().remove(pageId);
                         plugin.getDataStorage().saveGUIsAsync();
                         GUIEditor.openEditor(player, gui, Math.max(1, pageId - 1));
                     }
-                } else if (slot == 5 && pageId > 1) {
+                } else if (slot == EDITOR_PREVIOUS_PAGE_BUTTON && pageId > MIN_GUI_ROWS) {
                     GUIEditor.openEditor(player, gui, pageId - 1);
-                } else if (slot == 6 && pageId < gui.pages().size()) {
+                } else if (slot == EDITOR_NEXT_PAGE_BUTTON && pageId < gui.pages().size()) {
                     GUIEditor.openEditor(player, gui, pageId + 1);
-                } else if (slot == 7) {
+                } else if (slot == EDITOR_TOGGLE_INTERACT_BUTTON) {
                     gui.pages().put(pageId, new GUIPage(page.items(), !page.allowInteract()));
                     plugin.getDataStorage().saveGUIsAsync();
                     GUIEditor.openEditor(player, gui, pageId);
-                } else if (slot == 8) {
+                } else if (slot == EDITOR_PREVIEW_BUTTON) {
                     player.openInventory(gui.getPage(pageId));
-                } else if (slot >= 9 && slot < 9 + gui.rows() * 9) {
+                } else if (slot >= CONTENT_AREA_START && slot < CONTENT_AREA_START + gui.rows() * 9) {
                     if (event.getClick() == ClickType.RIGHT) {
                         GUIEditor.openContextMenu(player, gui, slot, pageId);
                     }
@@ -262,51 +265,51 @@ public class EventListener implements Listener {
             } else if (title.equals("物品設置")) {
                 event.setCancelled(true);
                 if (gui == null) {
-                    player.sendMessage("§c無效 GUI！");
-                    new MainMenuGUI(plugin, 1).open(player);
+                    player.sendMessage(MSG_INVALID_GUI);
+                    new MainMenuGUI(plugin, DEFAULT_GUI_PAGE).open(player);
                     return;
                 }
                 int itemSlot = editorHolder.getSlot();
                 switch (slot) {
-                    case 0:
-                        GUIEditor.openItemSelect(player, gui, itemSlot, pageId, null, 1);
+                    case CONTEXT_SELECT_ITEM_BUTTON:
+                        GUIEditor.openItemSelect(player, gui, itemSlot, pageId, null, DEFAULT_GUI_PAGE);
                         break;
-                    case 1:
-                        plugin.setEditSession(player.getUniqueId(), new EditSession(gui, "set_command", itemSlot, pageId));
+                    case CONTEXT_SET_PLAYER_COMMAND_BUTTON:
+                        plugin.setEditSession(player.getUniqueId(), new EditSession(gui, STATE_SET_COMMAND, itemSlot, pageId));
                         player.closeInventory();
-                        inputHandler.openSignInput(player, "輸入玩家命令（不含 /）", input -> handleInput(player, input));
+                        inputHandler.openSignInput(player, PROMPT_ENTER_PLAYER_COMMAND, input -> handleInput(player, input));
                         break;
-                    case 2:
-                        plugin.setEditSession(player.getUniqueId(), new EditSession(gui, "set_command", itemSlot, pageId, new ArrayList<>(Collections.singletonList("console"))));
+                    case CONTEXT_SET_CONSOLE_COMMAND_BUTTON:
+                        plugin.setEditSession(player.getUniqueId(), new EditSession(gui, STATE_SET_COMMAND, itemSlot, pageId, new ArrayList<>(Collections.singletonList(TEMP_FLAG_CONSOLE))));
                         player.closeInventory();
-                        inputHandler.openSignInput(player, "輸入控制台命令（不含 /）", input -> handleInput(player, input));
+                        inputHandler.openSignInput(player, PROMPT_ENTER_CONSOLE_COMMAND, input -> handleInput(player, input));
                         break;
-                    case 3:
-                        plugin.setEditSession(player.getUniqueId(), new EditSession(gui, "set_item_name", itemSlot, pageId));
+                    case CONTEXT_SET_NAME_BUTTON:
+                        plugin.setEditSession(player.getUniqueId(), new EditSession(gui, STATE_SET_ITEM_NAME, itemSlot, pageId));
                         player.closeInventory();
-                        inputHandler.openSignInput(player, "輸入物品名稱", input -> handleInput(player, input));
+                        inputHandler.openSignInput(player, PROMPT_ENTER_ITEM_NAME, input -> handleInput(player, input));
                         break;
-                    case 4:
-                        plugin.setEditSession(player.getUniqueId(), new EditSession(gui, "delete_item", itemSlot, pageId));
-                        handleInput(player, ""); // 直接處理刪除，無需輸入
+                    case CONTEXT_DELETE_ITEM_BUTTON:
+                        plugin.setEditSession(player.getUniqueId(), new EditSession(gui, STATE_DELETE_ITEM, itemSlot, pageId));
+                        handleInput(player, EMPTY_STRING); // 直接處理刪除，無需輸入
                         GUIEditor.openEditor(player, gui, pageId);
                         break;
-                    case 5:
+                    case CONTEXT_MANAGE_COMMANDS_BUTTON:
                         if (page.items().containsKey(itemSlot)) {
-                            GUIEditor.openCommandManager(player, gui, itemSlot, pageId, 1);
+                            GUIEditor.openCommandManager(player, gui, itemSlot, pageId, DEFAULT_GUI_PAGE);
                         } else {
-                            player.sendMessage("§c請先為該槽位設置一個物品！");
+                            player.sendMessage(MSG_SET_ITEM_FIRST);
                         }
                         break;
-                    case 8:
+                    case CONTEXT_BACK_BUTTON:
                         GUIEditor.openEditor(player, gui, pageId);
                         break;
                 }
             } else if (title.startsWith("選擇物品") || title.startsWith("搜尋物品")) {
                 event.setCancelled(true);
                 if (gui == null) {
-                    player.sendMessage("§c無效 GUI！");
-                    new MainMenuGUI(plugin, 1).open(player);
+                                            player.sendMessage(MSG_INVALID_GUI);
+                    new MainMenuGUI(plugin, DEFAULT_GUI_PAGE).open(player);
                     return;
                 }
                 String search = editorHolder.getSearch();
@@ -367,8 +370,8 @@ public class EventListener implements Listener {
             } else if (title.startsWith("管理命令: ")) {
                 event.setCancelled(true);
                 if (gui == null) {
-                    player.sendMessage("§c無效 GUI！");
-                    new MainMenuGUI(plugin, 1).open(player);
+                    player.sendMessage(MSG_INVALID_GUI);
+                    new MainMenuGUI(plugin, DEFAULT_GUI_PAGE).open(player);
                     return;
                 }
                 int itemSlot = editorHolder.getSlot();
@@ -409,7 +412,7 @@ public class EventListener implements Listener {
             int pageId = guiHolder.getPageId();
             if (!gui.pages().containsKey(pageId)) {
                 gui.pages().put(pageId, new GUIPage());
-                plugin.getLogger().warning("GUI " + gui.name() + " 缺少 pageId=" + pageId + "，已自動創建");
+                plugin.getLogger().warning(String.format(LOG_GUI_MISSING_PAGE, gui.name(), pageId));
                 plugin.getDataStorage().saveGUIsAsync();
             }
             GUIPage page = gui.pages().get(pageId);

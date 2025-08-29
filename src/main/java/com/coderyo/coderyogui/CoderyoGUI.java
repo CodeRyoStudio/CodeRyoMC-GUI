@@ -9,6 +9,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.HashMap;
 import java.util.UUID;
 
+import static com.coderyo.coderyogui.Constants.*;
+
 public class CoderyoGUI extends JavaPlugin {
     private GUIManager guiManager;
     private DataStorage dataStorage;
@@ -74,7 +76,7 @@ public class CoderyoGUI extends JavaPlugin {
     }
 
     public void openMainMenu(Player player) {
-        new MainMenuGUI(this, 1).open(player);
-        player.sendMessage("§aReturned to main menu");
+        new MainMenuGUI(this, DEFAULT_GUI_PAGE).open(player);
+        player.sendMessage(MSG_RETURNED_TO_MAIN_MENU);
     }
 }

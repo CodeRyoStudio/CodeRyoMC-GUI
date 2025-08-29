@@ -12,6 +12,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import static com.coderyo.coderyogui.Constants.*;
+
 public class InputHandler {
     private final CoderyoGUI plugin;
     private final Map<Player, Location> activeSigns = new HashMap<>();
@@ -75,7 +77,7 @@ public class InputHandler {
                     }
                 }
             }
-        }.runTaskTimer(plugin, 0L, 20L);
+        }.runTaskTimer(plugin, SIGN_CLEANUP_TASK_DELAY, SIGN_CLEANUP_TASK_PERIOD);
     }
 
     public void removeSign(Player player) {
@@ -92,13 +94,13 @@ public class InputHandler {
     }
 
     private Location findSafeSignLocation(Player player) {
-        Location loc = player.getLocation().subtract(0, 2, 0);
-        if (isSafeLocation(loc)) {
-            return loc;
+        Location location = player.getLocation().add(0, SIGN_LOCATION_Y_OFFSET_DOWN, 0);
+        if (isSafeLocation(location)) {
+            return location;
         }
-        loc = player.getLocation().add(0, 2, 0);
-        if (isSafeLocation(loc)) {
-            return loc;
+        location = player.getLocation().add(0, SIGN_LOCATION_Y_OFFSET_UP, 0);
+        if (isSafeLocation(location)) {
+            return location;
         }
         return null;
     }

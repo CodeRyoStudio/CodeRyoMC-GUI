@@ -11,6 +11,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.coderyo.coderyogui.Constants.*;
+
 public class MainMenuGUI {
     private final CoderyoGUI plugin;
     private final int page;
@@ -21,38 +23,53 @@ public class MainMenuGUI {
     }
 
     public Inventory open(Player player) {
-        Inventory inv = Bukkit.createInventory(new MainMenuHolder(page), 54, "CoderyoGUI 主菜單");
-        for (int i = 0; i < 54; i++) {
-            inv.setItem(i, createItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of()));
+        Inventory inv = Bukkit.createInventory(new MainMenuHolder(page), INVENTORY_SIZE_54, TITLE_MAIN_MENU);
+
+        // 填滿背景
+        for (int slotIndex = 0; slotIndex < INVENTORY_SIZE_54; slotIndex++) {
+            inv.setItem(slotIndex, createItem(Material.GRAY_STAINED_GLASS_PANE, EMPTY_STRING, List.of()));
         }
-        inv.setItem(0, createItem(Material.CRAFTING_TABLE, "§a創建新 GUI", List.of("§7點擊創建")));
-        inv.setItem(1, createItem(Material.CHEST, "§a打開現有 GUI", List.of("§7點擊查看")));
-        inv.setItem(2, createItem(Material.ANVIL, "§a編輯 GUI", List.of("§7點擊編輯")));
-        inv.setItem(3, createItem(Material.RED_WOOL, "§c刪除 GUI", List.of("§7點擊刪除")));
+
+        // 設置功能按鈕
+        inv.setItem(MAIN_MENU_CREATE_BUTTON, createItem(Material.CRAFTING_TABLE, DISPLAY_CREATE_GUI, List.of(LORE_CLICK_CREATE)));
+        inv.setItem(MAIN_MENU_OPEN_BUTTON, createItem(Material.CHEST, DISPLAY_OPEN_GUI, List.of(LORE_CLICK_OPEN)));
+        inv.setItem(MAIN_MENU_EDIT_BUTTON, createItem(Material.ANVIL, DISPLAY_EDIT_GUI, List.of(LORE_CLICK_EDIT)));
+        inv.setItem(MAIN_MENU_DELETE_BUTTON, createItem(Material.RED_WOOL, DISPLAY_DELETE_GUI, List.of(LORE_CLICK_DELETE)));
+
+        // 獲取並顯示GUI列表
         List<String> guiNames = new ArrayList<>(plugin.getGuiManager().getGUIs().keySet());
-        int start = (page - 1) * 45;
-        for (int i = 0; i < 45 && start + i < guiNames.size(); i++) {
-            String name = guiNames.get(start + i);
-            inv.setItem(9 + i, createItem(Material.PAPER, "§a" + name, List.of("§7左鍵打開", "§7右鍵編輯")));
+        int startIndex = (page - 1) * ITEMS_PER_PAGE;
+
+        for (int itemIndex = 0; itemIndex < ITEMS_PER_PAGE && startIndex + itemIndex < guiNames.size(); itemIndex++) {
+            String guiName = guiNames.get(startIndex + itemIndex);
+            int slotPosition = CONTENT_AREA_START + itemIndex;
+            inv.setItem(slotPosition, createItem(Material.PAPER, "§a" + guiName, List.of("§7左鍵打開", "§7右鍵編輯")));
         }
+
+        // 設置分頁按鈕
         if (page > 1) {
-            inv.setItem(52, createItem(Material.ARROW, "§a上一頁", List.of()));
+            inv.setItem(PREVIOUS_PAGE_BUTTON, createItem(Material.ARROW, DISPLAY_PREVIOUS_PAGE, List.of()));
         }
-        if (start + 45 < guiNames.size()) {
-            inv.setItem(53, createItem(Material.ARROW, "§a下一頁", List.of()));
+        if (startIndex + ITEMS_PER_PAGE < guiNames.size()) {
+            inv.setItem(NEXT_PAGE_BUTTON, createItem(Material.ARROW, DISPLAY_NEXT_PAGE, List.of()));
         }
+
         player.openInventory(inv);
         return inv;
     }
 
-    private ItemStack createItem(Material material, String name, List<String> lore) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.RESET + name);
-        if (lore != null) {
-            meta.setLore(lore.stream().map((String s) -> ChatColor.RESET + s).toList());
+    private ItemStack createItem(Material material, String displayName, List<String> lore) {
+        ItemStack itemStack = new ItemStack(material);
+        ItemMeta itemMeta = itemStack.getItemMeta();
+
+        if (itemMeta != null) {
+            itemMeta.setDisplayName(ChatColor.RESET + displayName);
+            if (lore != null) {
+                itemMeta.setLore(lore.stream().map((String loreLine) -> ChatColor.RESET + loreLine).toList());
+            }
+            itemStack.setItemMeta(itemMeta);
         }
-        item.setItemMeta(meta);
-        return item;
+
+        return itemStack;
     }
 }
